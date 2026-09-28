@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# Copy this checkout over the locally installed plugin and restart the shell.
+# The previous install is kept in build/installed-<timestamp>/.
+set -euo pipefail
+cd -- "$(dirname -- "$0")/.."
+src=$PWD
+dest=${OMARCHY_PLUGIN_DIR:-$HOME/.config/omarchy/plugins/ertiv.matrix-rain}
+excludes=(--exclude .git --exclude /build --exclude /dist --exclude __pycache__
+  --exclude org.omarchy.screensaver)
+# Machine-local files that are never overwritten once installed: the idle
+# integration launches the screensaver through its own screensaver/launch.
+keep=(screensaver/launch)
+for f in "${keep[@]}"; do
+  [[ -e $dest/$f ]] && excludes+=(--exclude "/$f")
+done
+
+if [[ -d $dest ]]; then
+  backup=build/installed-$(date +%Y%m%d-%H%M%S)
+  mkdir -p build
+  cp -a -- "$dest" "$backup"
+  echo "Backed up previous install to $backup"
+fi
+mkdir -p -- "$dest"
+rsync -a --delete "${excludes[@]}" -- "$src/" "$dest/"
+
+# Verify: the install must match the checkout file for file.
+kept=" ${keep[*]} "
+mismatch=$({ diff -rq -x .git -x build -x dist -x __pycache__ -x org.omarchy.screensaver -- "$src" "$dest" || true; } \
+  | while read -r line; do
+      rel=${line#Files "$src"/}; rel=${rel%% and *}
+      [[ $kept == *" $rel "* ]] || printf '%s\n' "$line"
+    done)
+if [[ -n $mismatch ]]; then
+  echo "install-local: $dest differs from $src after copy:" >&2
+  printf '%s\n' "$mismatch" >&2
+  exit 1
+fi
+for f in "${keep[@]}"; do
+  cmp -s -- "$src/$f" "$dest/$f" || echo "Kept local $f"
+done
+# The screensaver binary is built per machine, not copied: rebuild it when
+# its source is newer (the previous binary stays in the backup).
+bin=$dest/screensaver/org.omarchy.screensaver
+if [[ ! -x $bin || $dest/screensaver/wrapper.cpp -nt $bin ]]; then
+  if command -v c++ >/dev/null && pkg-config --exists Qt6Quick 2>/dev/null; then
+    "$dest/screensaver/build" && echo "Rebuilt the screensaver"
+  else
+    echo "install-local: cannot rebuild the screensaver (needs c++ and Qt 6 dev files)" >&2
+  fi
+fi
+echo "Installed $(git rev-parse --short HEAD)$(git diff --quiet HEAD || echo '+dirty') to $dest"
+
+# The shell's hot reload can keep serving the previously compiled Service.qml
+# (seen repeatedly on Omarchy 4.0.3), so restart it to load this version.
+# Pass --no-restart to rely on hot reload instead.
+if [[ ${1:-} != --no-restart ]] && command -v omarchy >/dev/null; then
+  echo "Restarting the Omarchy shell to load it"
+  omarchy restart shell >/dev/null 2>&1 || echo "install-local: shell restart failed; run: omarchy restart shell" >&2
+elif command -v omarchy-shell >/dev/null; then
+  omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
+fi

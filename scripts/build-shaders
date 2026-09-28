@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd -- "$(dirname -- "$0")/.."
+qsb_bin=${QSB:-/usr/lib/qt6/bin/qsb}
+for shader in shaders/*.frag screensaver/shaders/*.frag; do
+  "$qsb_bin" --glsl '100 es,120,150' --hlsl 50 --msl 12 -o "$shader.qsb" "$shader"
+done

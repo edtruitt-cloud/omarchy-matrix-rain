@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Optional, manually launched visual preview. Does not change idle/lock settings.
+set -euo pipefail
+DIR=$(cd -- "$(dirname -- "$0")" && pwd)
+if [[ ! -x "$DIR/org.omarchy.screensaver" ]]; then
+  echo 'Build the optional screensaver first: ./screensaver/build' >&2
+  exit 1
+fi
+exec "$DIR/org.omarchy.screensaver" "$DIR/Screensaver.qml" "$@"

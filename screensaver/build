@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd -- "$(dirname -- "$0")"
+c++ -std=c++17 -O2 -fPIC wrapper.cpp -o org.omarchy.screensaver $(pkg-config --cflags --libs Qt6Quick Qt6Qml Qt6Gui)

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "ertiv.matrix-rain",
+  "name": "Matrix Rain",
+  "version": "1.0.0",
+  "author": "ertiv",
+  "license": "MIT",
+  "description": "Animated digital rain wallpaper: weather presets, colour looks that set your Omarchy theme, depth layers, reactions and rain events. Links with Sound Lab.",
+  "kinds": [
+    "service",
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Matrix Rain",
+    "description": "Digital rain settings.",
+    "category": "Desktop",
+    "defaultSection": "right",
+    "allowMultiple": false
+  }
+}

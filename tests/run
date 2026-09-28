@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd -- "$(dirname -- "$0")/.."
+export PYTHONDONTWRITEBYTECODE=1
+python3 tests/validate_plugin.py .
+python3 tests/test_rain.py
+python3 tests/test_rain_theme.py

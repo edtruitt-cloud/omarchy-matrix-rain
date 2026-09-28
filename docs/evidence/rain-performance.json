@@ -1,0 +1,152 @@
+[
+  {
+    "scenario": "classic",
+    "applied": {
+      "preset": "classic",
+      "layers": 1,
+      "letterSize": 16
+    },
+    "mode": "running",
+    "seconds": 3.001950182951987,
+    "cpu_percent_one_core": 3.997401445283054,
+    "gpu_engine_percent": {
+      "drm-engine-gfx": 11.979569182802518
+    },
+    "phase_delta": 0.6757627861600781
+  },
+  {
+    "scenario": "classic",
+    "applied": {
+      "preset": "classic",
+      "layers": 1,
+      "letterSize": 16
+    },
+    "mode": "paused",
+    "seconds": 3.0019177270005457,
+    "cpu_percent_one_core": 0.0,
+    "gpu_engine_percent": {
+      "drm-engine-gfx": 0.0
+    },
+    "phase_delta": 0.0
+  },
+  {
+    "scenario": "storm 5 layers, sharp",
+    "applied": {
+      "preset": "storm",
+      "layers": 5,
+      "letterSize": 14
+    },
+    "mode": "running",
+    "seconds": 3.001739003986586,
+    "cpu_percent_one_core": 3.664542448690904,
+    "gpu_engine_percent": {
+      "drm-engine-gfx": 42.65340045552213
+    },
+    "phase_delta": 1.8202370988000212
+  },
+  {
+    "scenario": "storm 5 layers, sharp",
+    "applied": {
+      "preset": "storm",
+      "layers": 5,
+      "letterSize": 14
+    },
+    "mode": "paused",
+    "seconds": 3.001748597016558,
+    "cpu_percent_one_core": 0.0,
+    "gpu_engine_percent": {
+      "drm-engine-gfx": 0.0
+    },
+    "phase_delta": 0.0
+  },
+  {
+    "scenario": "storm 5 layers, balanced",
+    "applied": {
+      "preset": "storm",
+      "layers": 5,
+      "letterSize": 14
+    },
+    "mode": "running",
+    "seconds": 3.001898772025015,
+    "cpu_percent_one_core": 3.6643474132139504,
+    "gpu_engine_percent": {
+      "drm-engine-gfx": 23.927949692835757
+    },
+    "phase_delta": 1.8212017860002447
+  },
+  {
+    "scenario": "storm 5 layers, balanced",
+    "applied": {
+      "preset": "storm",
+      "layers": 5,
+      "letterSize": 14
+    },
+    "mode": "paused",
+    "seconds": 3.00178725796286,
+    "cpu_percent_one_core": 0.0,
+    "gpu_engine_percent": {
+      "drm-engine-gfx": 0.0
+    },
+    "phase_delta": 0.0
+  },
+  {
+    "scenario": "storm 5 layers, fast",
+    "applied": {
+      "preset": "storm",
+      "layers": 5,
+      "letterSize": 14
+    },
+    "mode": "running",
+    "seconds": 3.002183648000937,
+    "cpu_percent_one_core": 4.663272351550571,
+    "gpu_engine_percent": {
+      "drm-engine-gfx": 21.973684902296625
+    },
+    "phase_delta": 1.819807988999969
+  },
+  {
+    "scenario": "storm 5 layers, fast",
+    "applied": {
+      "preset": "storm",
+      "layers": 5,
+      "letterSize": 14
+    },
+    "mode": "paused",
+    "seconds": 3.001782981969882,
+    "cpu_percent_one_core": 0.0,
+    "gpu_engine_percent": {
+      "drm-engine-gfx": 0.0
+    },
+    "phase_delta": 0.0
+  },
+  {
+    "scenario": "storm, depth off",
+    "applied": {
+      "preset": "storm",
+      "layers": 0,
+      "letterSize": 14
+    },
+    "mode": "running",
+    "seconds": 3.0016805339837447,
+    "cpu_percent_one_core": 3.9977605425164793,
+    "gpu_engine_percent": {
+      "drm-engine-gfx": 8.664458860811216
+    },
+    "phase_delta": 1.8203037738002763
+  },
+  {
+    "scenario": "storm, depth off",
+    "applied": {
+      "preset": "storm",
+      "layers": 0,
+      "letterSize": 14
+    },
+    "mode": "paused",
+    "seconds": 3.001862181001343,
+    "cpu_percent_one_core": 0.0,
+    "gpu_engine_percent": {
+      "drm-engine-gfx": 0.0
+    },
+    "phase_delta": 0.0
+  }
+]
