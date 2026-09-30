@@ -87,12 +87,12 @@ Item {
   // Depth: a second, smaller, slower layer behind the main rain.
   property real depthLevel: 0.45        // visibility, 0..0.9
   property real depthScale: 0.6         // farthest layer's letter size relative to the main rain
-  property int depthLayers: 1           // extra layers behind the main rain, 1..5
+  property int depthLayers: 1           // extra layers behind the main rain, 0 (off)..5
   // Depth quality: resolution the layers behind the front render at.
   property string depthQuality: "balanced"
   readonly property var depthQualities: ({ sharp: 1.0, balanced: 0.66, fast: 0.5 })
   readonly property real depthResolution: depthQualities[depthQuality] || 0.66
-  readonly property bool depthOn: depthLevel > 0.001
+  readonly property bool depthOn: depthLevel > 0.001 && depthLayers > 0
   // Shape of the streams (1 = the original look).
   property real trailScale: 1.0         // trail length, 0.5..2
   property real glyphFlicker: 1.0       // how fast characters change, 0..2
@@ -130,7 +130,7 @@ Item {
     persist()
   }
   readonly property var rainAmountRanges: ({
-    depthLevel: [0, 0.9], depthScale: [0.4, 0.9], depthLayers: [1, 5], trailScale: [0.5, 2], glyphFlicker: [0, 2],
+    depthLevel: [0, 0.9], depthScale: [0.4, 0.9], depthLayers: [0, 5], trailScale: [0.5, 2], glyphFlicker: [0, 2],
     flashAmount: [0, 1], burstAmount: [0, 1], tempoPull: [0, 1], cpuPull: [0, 1],
     crtAmount: [0, 1], mirrorAmount: [0, 1], glyphWeight: [0, 1], gravity: [0, 1], speedVariety: [0, 2],
     trailVariety: [0, 3], headGlow: [0, 1], bloomAmount: [0, 1], aberration: [0, 1], vignette: [0, 1],
@@ -209,6 +209,10 @@ Item {
   // Stream heads: the look's own, white, the body colour or the theme accent.
   readonly property var headModes: ["look", "white", "body", "accent"]
   property string headColor: "look"
+  // Heads for the depth layers: all of them ("" = same as the rain), and each
+  // layer on its own (index 0 = Layer 1; "" = same as all layers).
+  property string backHeadColor: ""
+  property var layerHeadColors: []
   // The depth layers' own colour look ("" = same as the front).
   property string backColor: ""
   // Each depth layer's own look (index 0 = the first layer behind the rain;
@@ -366,7 +370,7 @@ Item {
   }
   readonly property real rainSize: {
     if (lfoDest !== "size") return letterSize
-    return clamp(letterSize * (1.0 + lfoDepth * (2.0 * lfoValue - 1.0) * 0.22), 4, 28)
+    return clamp(letterSize * (1.0 + lfoDepth * (2.0 * lfoValue - 1.0) * 0.22), 4, 100)
   }
 
   readonly property var rainPresets: Palette.presets
@@ -435,6 +439,31 @@ Item {
   }
   readonly property int headModeIndex: Math.max(0, headModes.indexOf(headColor))
   readonly property color headFixed: headColor === "accent" ? Color.accent : "#ffffff"
+  // Heads of the layer resting in slot k (0 = the rain).
+  function headModeAt(k) {
+    if (k <= 0) return root.headColor
+    return root.layerHeadColors[k - 1] || root.backHeadColor || root.headColor
+  }
+  // For a layer at distance d: the nearest slot's heads.
+  function headModeFor(d) {
+    var n = Math.max(1, root.layerCount - 2)
+    var k = root.depthOn ? Math.round(clamp((d - 1) * n, 0, root.depthLayers)) : 0
+    return headModeAt(k)
+  }
+  function setLayerHead(layer, mode) {
+    var i = Math.round(Number(layer)) - 1
+    if (!(i >= 0 && i < 5) || (mode !== "" && root.headModes.indexOf(mode) < 0)) return false
+    var next = root.layerHeadColors.slice()
+    while (next.length < 5) next.push("")
+    next[i] = mode
+    root.layerHeadColors = next
+    persist()
+    return true
+  }
+  function cleanHeads(list) {
+    if (!Array.isArray(list)) return []
+    return list.slice(0, 5).map(function(m) { return root.headModes.indexOf(m) >= 0 ? m : "" })
+  }
 
   function validRainColor(v) {
     var t = Palette.canonical(String(v || "").trim().toLowerCase())
@@ -583,7 +612,7 @@ Item {
   }
 
   function applyLetterSize(v) {
-    root.letterSize = clamp(v, 4, 28)
+    root.letterSize = clamp(v, 4, 100)
     persist()
   }
 
@@ -598,7 +627,7 @@ Item {
   }
 
   function weatherValue(key, v) {
-    if (key === "letterSize") return clamp(v, 4, 28)
+    if (key === "letterSize") return clamp(v, 4, 100)
     if (key === "speed") return clamp(v, 0.02, 1.0)
     if (key === "density") return clamp(v, 0.5, 1.0)
     var r = root.rainAmountRanges[key]
@@ -624,6 +653,9 @@ Item {
     } else if (key === "headColor") {
       if (root.headModes.indexOf(value) < 0) return false
       root.headColor = value
+    } else if (key === "backHeadColor") {
+      if (value !== "" && root.headModes.indexOf(value) < 0) return false
+      root.backHeadColor = value
     } else if (key === "backColor") {
       var bc = value === "" ? "" : validRainColor(value)
       if (value !== "" && bc === "") return false
@@ -777,7 +809,10 @@ Item {
     root.lookKeys.forEach(function(k) { l[k] = root[k] })
     l.rainColor = root.rainColor; l.glyphSet = root.glyphSet
     l.headColor = root.headColor; l.backColor = root.backColor
+    l.backHeadColor = root.backHeadColor; l.layerHeadColors = root.layerHeadColors.slice()
     l.layerColors = root.layerColors.slice()
+    // The Omarchy theme's colour ("" = not set by Matrix Rain).
+    l.themeColor = root.themeColor
     return l
   }
   // quiet: a workspace look; the rain colour changes without retheming the desktop.
@@ -786,8 +821,14 @@ Item {
     root.lookKeys.forEach(function(k) { if (l[k] !== undefined) root[k] = weatherValue(k, l[k]) })
     if (root.glyphSets[l.glyphSet]) root.glyphSet = l.glyphSet
     if (root.headModes.indexOf(l.headColor) >= 0) root.headColor = l.headColor
+    root.backHeadColor = root.headModes.indexOf(l.backHeadColor) >= 0 ? l.backHeadColor : ""
+    root.layerHeadColors = cleanHeads(l.layerHeadColors)
     if (l.backColor === "" || (typeof l.backColor === "string" && validRainColor(l.backColor) !== "")) root.backColor = l.backColor === "" ? "" : validRainColor(l.backColor)
     root.layerColors = cleanLayerColors(l.layerColors)
+    // The theme colour comes back too, except for workspace looks (a theme
+    // change restarts the shell), and only when it differs.
+    if (!quiet && typeof l.themeColor === "string" && l.themeColor !== "" && validRainColor(l.themeColor) !== root.themeColor)
+      applyThemeColor(l.themeColor)
     var colour = typeof l.rainColor === "string" ? validRainColor(l.rainColor) : ""
     if (colour !== "" && colour !== root.rainColor) {
       if (quiet) { root.rainColor = colour; if (colour === "wallpaper" && !root.wallpaperColors.length) readWallpaper(); persist() }
@@ -801,11 +842,24 @@ Item {
   }
   function saveLook(name) {
     var n = String(name || "").trim().slice(0, 24) || ("Look " + (root.savedLooks.length + 1))
-    var list = root.savedLooks.filter(function(x) { return x.name !== n })
-    list.push({ name: n, look: currentLook() })
+    // Saving over a name keeps its place in your order.
+    var list = root.savedLooks.slice(), at = -1
+    for (var i = 0; i < list.length; i++) if (list[i].name === n) at = i
+    if (at >= 0) list[at] = { name: n, look: currentLook() }
+    else list.push({ name: n, look: currentLook() })
     root.savedLooks = list.slice(-12)
     persist()
     return n
+  }
+  // Drag and drop in the panel: move a saved look to another place.
+  function moveLook(from, to) {
+    var list = root.savedLooks.slice()
+    if (!(from >= 0 && from < list.length && to >= 0 && to < list.length) || from === to) return false
+    var item = list.splice(from, 1)[0]
+    list.splice(to, 0, item)
+    root.savedLooks = list
+    persist()
+    return true
   }
   function deleteLook(name) {
     var before = root.savedLooks.length
@@ -1408,6 +1462,8 @@ Item {
       wallpaperColors: root.wallpaperColors,
       rainColorResolved: root.resolvedColor(root.rainColor),
       headColor: root.headColor,
+      backHeadColor: root.backHeadColor,
+      layerHeadColors: root.layerHeadColors,
       backColor: root.backColor,
       layerColors: root.layerColors,
       themeColor: root.themeColor,
@@ -1429,7 +1485,7 @@ Item {
       if (typeof s.enabled === "boolean") root.enabled = s.enabled
       if (typeof s.manualPaused === "boolean") root.manualPaused = s.manualPaused
       if (typeof s.pauseOnFullscreen === "boolean") root.pauseOnFullscreen = s.pauseOnFullscreen
-      if (s.letterSize !== undefined) root.letterSize = clamp(s.letterSize, 4, 28)
+      if (s.letterSize !== undefined) root.letterSize = clamp(s.letterSize, 4, 100)
       if (s.speed !== undefined) root.speed = clamp(s.speed, 0.02, 1.0)
       if (s.density !== undefined) root.density = clamp(s.density, 0.50, 1.00)
       for (var ak in root.rainAmountRanges)
@@ -1449,6 +1505,8 @@ Item {
       if (Array.isArray(s.collapsedSections)) root.collapsedSections = s.collapsedSections.filter(function(x) { return typeof x === "string" }).slice(0, 20)
       if (Array.isArray(s.wallpaperColors)) root.wallpaperColors = s.wallpaperColors.filter(function(h) { return /^#[0-9a-f]{6}$/.test(h) }).slice(0, 4)
       if (typeof s.headColor === "string" && root.headModes.indexOf(s.headColor) >= 0) root.headColor = s.headColor
+      if (typeof s.backHeadColor === "string") root.backHeadColor = root.headModes.indexOf(s.backHeadColor) >= 0 ? s.backHeadColor : ""
+      if (Array.isArray(s.layerHeadColors)) root.layerHeadColors = root.cleanHeads(s.layerHeadColors)
       if (s.backColor === "" || (typeof s.backColor === "string" && validRainColor(s.backColor) !== "")) root.backColor = s.backColor === "" ? "" : validRainColor(s.backColor)
       if (Array.isArray(s.layerColors)) root.layerColors = root.cleanLayerColors(s.layerColors)
       if (typeof s.themeColor === "string") { var tc = s.themeColor === "" ? "" : validRainColor(s.themeColor); if (tc !== "theme" && tc !== "daylight") root.themeColor = tc }
@@ -1647,8 +1705,9 @@ Item {
     colorC: pal.colorC
     colorD: pal.colorD
     colorVariation: pal.variation || 0
-    headMode: root.headModeIndex
-    headFixed: root.headFixed
+    readonly property string heads: root.headModeFor(dist)
+    headMode: Math.max(0, root.headModes.indexOf(heads))
+    headFixed: heads === "accent" ? Color.accent : "#ffffff"
     glyphSet: root.glyphRange
     customSource: root.customShown ? "file://" + root.customAtlasPath + "?v=" + root.customRev : ""
     customRows: root.customShown ? root.customRows : 0

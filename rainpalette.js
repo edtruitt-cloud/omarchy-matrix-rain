@@ -23,16 +23,36 @@ var presets = {
     moss:     { head: "#e6ecc0", body: "#8e9a3c", tail: "#1c2208" },
     sepia:    { head: "#fff0d8", body: "#c89a6a", tail: "#3a2410" },
     ghost:    { head: "#ffffff", body: "#cdd6e8", tail: "#2a2e38" },
-    noir:     { head: "#ffffff", body: "#6e6e6e", tail: "#141414" }
+    noir:     { head: "#ffffff", body: "#6e6e6e", tail: "#141414" },
+    amber:    { head: "#fff0c0", body: "#ffa200", tail: "#4a2600" },
+    chocolate:{ head: "#e8c0a0", body: "#6e3a1a", tail: "#1a0a02" },
+    wine:     { head: "#ffb0cc", body: "#8c1040", tail: "#220010" },
+    hotpink:  { head: "#ffe0f0", body: "#ff2d8c", tail: "#4a0024" },
+    orchid:   { head: "#fbe0ff", body: "#d86ee0", tail: "#3a1040" },
+    navy:     { head: "#b8c4ff", body: "#1c2c80", tail: "#02061e" },
+    teal:     { head: "#c0fff4", body: "#00857a", tail: "#001e1c" },
+    pine:     { head: "#c8ffd4", body: "#1f8a3a", tail: "#021e08" },
+    // Near-black rain with blazing gold heads, like falling sparks.
+    eclipse:  { head: "#ffd84a", body: "#262018", tail: "#050402" },
+    // Deep indigo rain with neon yellow-green heads (a UV poster).
+    blacklight: { head: "#e4ff3a", body: "#3a1a9a", tail: "#0a0428" },
+    // Metallic copper whose trails age into verdigris.
+    copper:   { head: "#ffd6a8", body: "#b87333", tail: "#12453c" },
+    // Warm off-white, like old bone or piano keys, fading brown.
+    ivory:    { head: "#fffaf0", body: "#efe2c4", tail: "#4a3a22" },
+    // Deep old-gold yellow.
+    mustard:  { head: "#fff1b0", body: "#c49a1a", tail: "#3a2c00" }
 }
-var presetNames = ["gold", "ember", "blood", "rust", "rose", "plasma", "lavender", "violet",
-                   "cobalt", "cyan", "mint", "venom", "moss", "sepia", "ghost", "noir"]
+var presetNames = ["gold", "amber", "ember", "blood", "rust", "chocolate", "wine", "rose", "hotpink",
+                   "plasma", "orchid", "lavender", "violet", "cobalt", "navy", "cyan", "teal", "mint",
+                   "pine", "venom", "moss", "mustard", "copper", "sepia", "ivory", "ghost", "noir",
+                   "eclipse", "blacklight"]
 // Earlier colour names, mapped to the closest current look.
 var aliases = {
     // singles
     orange: "ember", amber: "ember", peach: "sepia", red: "blood", crimson: "blood",
     magenta: "plasma", blue: "cobalt", sky: "cyan", frost: "cyan",
-    ice: "cyan", teal: "cyan", lime: "venom", toxic: "venom",
+    ice: "cyan", lime: "venom", toxic: "venom",
     sulfur: "gold", white: "ghost",
     // multi-colour looks
     cyberpunk: "neon", dusk: "sunset"
@@ -65,11 +85,14 @@ var multi = {
     aurora: { mode: "gradient", colors: ["#3dff8a", "#00d6c8", "#3a7bff", "#b46cff"] },
     // White at the very top, blues darkening downwards; some streams darker.
     ocean: { mode: "gradient", colors: ["#ffffff", "#8fd3ff", "#2a6fd6", "#0a2a6a"], variation: 0.4 },
+    // Forest: leaf green at the top, deeper green, bark brown, then grey-brown
+    // stone at the bottom (some streams darker, for grey and brown there).
+    forest: { mode: "gradient", colors: ["#5ee05a", "#2e9e3c", "#7a4e24", "#7a7268"], variation: 0.45 },
     // Deep purple through magenta to blue, with dark "space" streams.
     galaxy: { mode: "gradient", colors: ["#2a0a5a", "#9a1aff", "#ff3dc0", "#1a3aff"], variation: 0.7 },
 }
 var multiNames = ["rainbow", "neon", "vapor", "glitch", "candy", "siren", "holly", "icefire",
-                  "ink", "fire", "lava", "sunset", "synthwave", "aurora", "ocean", "galaxy"]
+                  "ink", "fire", "lava", "sunset", "synthwave", "aurora", "ocean", "forest", "galaxy"]
 var modes = { single: 0, streams: 1, gradient: 2, rainbow: 3 }
 
 function isMulti(spec) { return multi[spec] !== undefined }

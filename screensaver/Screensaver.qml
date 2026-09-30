@@ -29,7 +29,7 @@ Window {
   readonly property real walkSpeed: Math.max(0.5, Math.min(4.0, 1.85 * Math.sqrt(setting("speed", 0.15, 0.02, 1.0) / 0.15)))
   // Density 0.75 (default) gives the original 0.90 of columns.
   readonly property real density: Math.min(0.98, setting("density", 0.75, 0.5, 1.0) * 1.2)
-  readonly property real cellScale: setting("letterSize", 16, 4, 28) / 16
+  readonly property real cellScale: setting("letterSize", 16, 4, 100) / 16
   readonly property real trailScale: setting("trailScale", 1, 0.5, 2)
   readonly property real glyphFlicker: setting("glyphFlicker", 1, 0, 2)
   readonly property real crt: setting("crtAmount", 0, 0, 1)
@@ -67,7 +67,13 @@ Window {
   readonly property var headModes: ["look", "white", "body", "accent"]
   readonly property int headMode: Math.max(0, headModes.indexOf(win.rain.headColor))
   readonly property color accentColor: typeof themeAccent === "string" ? Qt.color(themeAccent) : Qt.color("#3CBF5C")
-  readonly property color headFixed: win.rain.headColor === "accent" ? win.accentColor : "#ffffff"
+  readonly property color headFixed: win.accentColor
+  // Heads of layer k, as on the wallpaper: its own, else all layers', else the rain's.
+  function slotHead(k) {
+    var own = win.listOf(win.rain.layerHeadColors)[k - 1] || ""
+    var all = typeof win.rain.backHeadColor === "string" ? win.rain.backHeadColor : ""
+    return Math.max(0, win.headModes.indexOf(own || all || win.rain.headColor))
+  }
 
   // --- Events, as on the wallpaper: the lit ones happen now and then at the
   // chosen rate, scaled to a screensaver's shorter sessions. Dive becomes a
@@ -228,8 +234,8 @@ Window {
   readonly property bool layersColoured: backSpec !== "" || layerSpecs.some(function(c) { return typeof c === "string" && c !== "" })
   readonly property int layerSlots: {
     if (!layersColoured) return 0
-    var n = Math.round(Number(win.rain.depthLayers) || 1)
-    var depthOn = win.rain.depthLevel === undefined || Number(win.rain.depthLevel) > 0.001
+    var n = win.rain.depthLayers === undefined ? 1 : Math.round(Number(win.rain.depthLayers) || 0)
+    var depthOn = n > 0 && (win.rain.depthLevel === undefined || Number(win.rain.depthLevel) > 0.001)
     return depthOn ? Math.max(1, Math.min(5, n)) : (backSpec !== "" ? 1 : 0)
   }
   readonly property var slotPalettes: {
@@ -362,7 +368,7 @@ Window {
     property real headMode: win.headMode
     property color headFixed: win.headFixed
     property real layerSlots: win.layerSlots
-    property vector4d l1Info: Qt.vector4d(win.slotPalettes[1].mode || 0, win.slotPalettes[1].variation || 0, 0, 0)
+    property vector4d l1Info: Qt.vector4d(win.slotPalettes[1].mode || 0, win.slotPalettes[1].variation || 0, win.slotHead(1), 0)
     property color l1Head: win.slotPalettes[1].head
     property color l1Body: win.slotPalettes[1].body
     property color l1Tail: win.slotPalettes[1].tail
@@ -370,7 +376,7 @@ Window {
     property color l1B: win.slotPalettes[1].colorB
     property color l1C: win.slotPalettes[1].colorC
     property color l1D: win.slotPalettes[1].colorD
-    property vector4d l2Info: Qt.vector4d(win.slotPalettes[2].mode || 0, win.slotPalettes[2].variation || 0, 0, 0)
+    property vector4d l2Info: Qt.vector4d(win.slotPalettes[2].mode || 0, win.slotPalettes[2].variation || 0, win.slotHead(2), 0)
     property color l2Head: win.slotPalettes[2].head
     property color l2Body: win.slotPalettes[2].body
     property color l2Tail: win.slotPalettes[2].tail
@@ -378,7 +384,7 @@ Window {
     property color l2B: win.slotPalettes[2].colorB
     property color l2C: win.slotPalettes[2].colorC
     property color l2D: win.slotPalettes[2].colorD
-    property vector4d l3Info: Qt.vector4d(win.slotPalettes[3].mode || 0, win.slotPalettes[3].variation || 0, 0, 0)
+    property vector4d l3Info: Qt.vector4d(win.slotPalettes[3].mode || 0, win.slotPalettes[3].variation || 0, win.slotHead(3), 0)
     property color l3Head: win.slotPalettes[3].head
     property color l3Body: win.slotPalettes[3].body
     property color l3Tail: win.slotPalettes[3].tail
@@ -386,7 +392,7 @@ Window {
     property color l3B: win.slotPalettes[3].colorB
     property color l3C: win.slotPalettes[3].colorC
     property color l3D: win.slotPalettes[3].colorD
-    property vector4d l4Info: Qt.vector4d(win.slotPalettes[4].mode || 0, win.slotPalettes[4].variation || 0, 0, 0)
+    property vector4d l4Info: Qt.vector4d(win.slotPalettes[4].mode || 0, win.slotPalettes[4].variation || 0, win.slotHead(4), 0)
     property color l4Head: win.slotPalettes[4].head
     property color l4Body: win.slotPalettes[4].body
     property color l4Tail: win.slotPalettes[4].tail
@@ -394,7 +400,7 @@ Window {
     property color l4B: win.slotPalettes[4].colorB
     property color l4C: win.slotPalettes[4].colorC
     property color l4D: win.slotPalettes[4].colorD
-    property vector4d l5Info: Qt.vector4d(win.slotPalettes[5].mode || 0, win.slotPalettes[5].variation || 0, 0, 0)
+    property vector4d l5Info: Qt.vector4d(win.slotPalettes[5].mode || 0, win.slotPalettes[5].variation || 0, win.slotHead(5), 0)
     property color l5Head: win.slotPalettes[5].head
     property color l5Body: win.slotPalettes[5].body
     property color l5Tail: win.slotPalettes[5].tail

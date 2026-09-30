@@ -49,7 +49,7 @@ ShellRoot {
         stop()
         svc.applyStateText("{not json"); if(!svc._stateCorrupt) throw new Error("Corrupt state flag")
         svc._stateCorrupt=false
-        svc.applyLetterSize(1000); if(svc.letterSize!==28) throw new Error("Clamp failed")
+        svc.applyLetterSize(1000); if(svc.letterSize!==100) throw new Error("Clamp failed")
         svc.applyLetterSize(16)
         svc.pauseOnFullscreen=true; svc.fullscreenOverride={A:true}
         if (svc.screenCanAnimate("A") || !svc.screenCanAnimate("B")) throw new Error("Per-monitor fullscreen gating")
@@ -83,7 +83,7 @@ ShellRoot {
         svc.applyRainColor("neon"); if (svc.rainPalette.mode !== 1) throw new Error("Per-stream mode")
         svc.applyRainColor("rainbow"); if (svc.rainPalette.mode !== 3) throw new Error("Rainbow mode")
         svc.applyRainColor("cyan"); if (svc.rainPalette.mode !== 0 || svc.themeSpecFor(svc.rainColor) !== "#00f0e0") throw new Error("Single new colour")
-        if (svc.validRainColor("toxic") !== "venom" || svc.validRainColor("teal") !== "cyan" || svc.validRainColor("fire") !== "fire" || svc.validRainColor("candy") !== "candy") throw new Error("Removed colours move to their closest look")
+        if (svc.validRainColor("toxic") !== "venom" || svc.validRainColor("teal") !== "teal" || svc.validRainColor("fire") !== "fire" || svc.validRainColor("candy") !== "candy") throw new Error("Removed colours move to their closest look")
         svc.applyRainColor("ember"); if (svc.themeSpecFor(svc.rainColor).split(",").length !== 3 || Math.abs(svc.rainPalette.head.b - 0.627) > 0.01) throw new Error("Ember trail colours reach the theme")
         if (svc.validRainColor("orange") !== "ember" || svc.validRainColor("sky") !== "cyan" || svc.validRainColor("frost") !== "cyan" || svc.validRainColor("mint") !== "mint") throw new Error("Old colour names migrate")
         svc.applyRainColor("ocean")
@@ -156,6 +156,8 @@ ShellRoot {
         if (!svc.depthOn || svc.setRainOption("trailScale", 9) !== true || svc.trailScale !== 2) throw new Error("Amount ranges")
         svc.setRainOption("trailScale", 1); svc.setRainOption("glyphFlicker", 1)
         svc.setRainOption("depthLayers", 9); if (svc.depthLayers !== 5) throw new Error("Depth layers clamp")
+        svc.setRainOption("depthLayers", 0); if (svc.depthOn || svc.layerCount !== 2 || svc.depthLayers !== 0) throw new Error("0 depth layers = no depth")
+        svc.setRainOption("depthLayers", 5)
         svc.setRainOption("depthLayers", 2.6); if (svc.depthLayers !== 3) throw new Error("Depth layers are whole")
         // Depth slots: evenly spaced, the farthest drawn at depthScale.
         svc.layerSlots = []
@@ -273,6 +275,13 @@ ShellRoot {
         if (svc.setLayerColor(7, "ember") || svc.setLayerColor(2, "bogus") || !svc.setLayerColor(2, "ember")) throw new Error("Layer colour option")
         if (svc.layerPaletteAt(1 + 2/3).body.r < 0.9 || svc.layerPaletteAt(1 + 1/3).body.b < 0.9 || svc.layerPaletteAt(2).body.b < 0.9) throw new Error("Layer 2 is Ember, layers 1 and 3 Cobalt")
         if (JSON.parse(svc.statePayload()).layerColors[1] !== "ember" || svc.currentLook().layerColors[1] !== "ember") throw new Error("Layer colours saved")
+        // Heads per layer: slot k uses its own, else all layers', else the rain's.
+        svc.setRainOption("headColor", "look")
+        if (svc.headModeFor(1 + 1/3) !== "look") throw new Error("Layer heads follow the rain")
+        if (!svc.setRainOption("backHeadColor", "white") || svc.headModeFor(1 + 2/3) !== "white" || svc.headModeFor(1) !== "look") throw new Error("All layers' heads")
+        if (svc.setLayerHead(2, "pink") || !svc.setLayerHead(2, "accent") || svc.headModeFor(1 + 2/3) !== "accent" || svc.headModeFor(1 + 1/3) !== "white") throw new Error("Layer 2's heads")
+        if (JSON.parse(svc.statePayload()).layerHeadColors[1] !== "accent" || svc.currentLook().backHeadColor !== "white") throw new Error("Layer heads saved")
+        svc.setLayerHead(2, ""); svc.setRainOption("backHeadColor", "")
         svc.setLayerColor(2, ""); svc.setRainOption("backColor", ""); svc.setRainOption("depthLayers", 1)
         // Only the Theme colour changes the theme; rain colours never do.
         svc.themeColor = ""; svc.applyRainColor("cyan"); if (svc.rainThemeSpec() !== "") throw new Error("Rain colours never set the theme")
@@ -325,6 +334,15 @@ ShellRoot {
         svc.enabled = true
         if (svc.fromBase64(svc.toBase64("Rüne ✓ {x}")) !== "Rüne ✓ {x}") throw new Error("Base64 round trip")
         var wsSaved = JSON.parse(svc.statePayload()); if (wsSaved.workspaceLooks["2"] !== "look:Shared") throw new Error("Workspace looks saved")
+        // Drag to reorder saved looks.
+        var before2 = svc.savedLooks.map(function(l) { return l.name }).join()
+        if (!svc.moveLook(0, 1) || svc.savedLooks.map(function(l) { return l.name }).join() !== "Shared,Rune rain") throw new Error("Move a look (" + before2 + ")")
+        if (svc.moveLook(0, 5) || svc.moveLook(1, 1)) throw new Error("Bad moves refused")
+        svc.moveLook(1, 0)
+        // The theme colour is saved with a look and comes back with it.
+        svc.themeColor = "gold"; svc.saveLook("Rune rain"); if (svc.savedLooks[0].name !== "Rune rain" || svc.savedLooks[0].look.themeColor !== "gold") throw new Error("Saving over a look keeps its place, with the theme")
+        svc.themeColor = ""; svc.recallLook("Rune rain"); if (svc.themeColor !== "gold") throw new Error("Theme colour comes back with the look")
+        svc.themeColor = ""
         svc.deleteLook("Rune rain"); svc.deleteLook("Shared"); if (svc.savedLooks.length) throw new Error("Delete look")
         if (svc.workspaceLooks["3"] !== undefined) throw new Error("Deleting a look clears its workspace")
         if (svc.workspaceLooks["2"] !== undefined) throw new Error("Deleting a look clears workspace 2")

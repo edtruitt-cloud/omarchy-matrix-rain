@@ -103,19 +103,22 @@ panels the mouse wheel only scrolls; it never changes a setting.
   layers behind the front together at reduced resolution. Measured at 4K on
   this machine: Storm with 5 layers uses about 43% of the GPU's graphics engine
   on Sharp, 24% on Balanced (default) and 22% on Fast; Classic about 12%.
-- **Colour**: 20 single looks and 16 multi-colour looks, each clearly
+- **Colour**: 33 single looks and 17 multi-colour looks, each clearly
   different (the test suite checks every pair of single colours). Single looks
   have their own head, body and tail, some shifting hue along the trail:
-  Green, Theme, Daylight, Wallpaper, Gold, *Ember* (yellow to orange to red),
-  Blood, Rust, Rose, *Plasma* (magenta to blue), Lavender, Violet, Cobalt,
-  Cyan, Mint, *Venom* (toxic lime), Moss, Sepia, Ghost and *Noir* (charcoal
-  with white heads). Multi-colour, per stream: *Rainbow* (hues drift across),
+  Green, Theme, Daylight, Wallpaper, Gold, Amber, *Ember* (yellow to orange
+  to red), Blood, Rust, Chocolate, Wine, Rose, Hot Pink, *Plasma* (magenta to
+  blue), Orchid, Lavender, Violet, Cobalt, Navy, Cyan, Teal, Mint, Pine,
+  *Venom* (toxic lime), Moss, Mustard, *Copper* (trails age into verdigris),
+  Sepia, Ivory, Ghost, *Noir* (charcoal with white heads), *Eclipse* (near-black
+  with gold heads, like sparks) and *Blacklight* (indigo with neon yellow heads). Multi-colour, per stream: *Rainbow* (hues drift across),
   *Neon*, *Vapor*, *Glitch* (mostly green with the odd red or white stream),
   *Candy* (red and white), *Siren* (red and blue), *Holly* (red and green),
   *Ice & Fire* (orange and blue), *Ink* (white and greys); gradients down the
   screen: *Fire*, *Lava* (dark at the top, glowing at the bottom), *Sunset*,
   *Synthwave* (cyan, pink, deep purple), *Aurora*, *Ocean* (white at the very
-  top, blues darkening downwards) and *Galaxy* (purple, magenta, blue, with
+  top, blues darkening downwards), *Forest* (leaf green, deeper green, bark
+  brown, grey-brown stone) and *Galaxy* (purple, magenta, blue, with
   dark streams). Picked for the Theme, a look recolours the Omarchy theme: its extra colours go
   to the window border gradient, the terminal's cyan/blue/magenta families and
   a split-toned wallpaper. As a rain colour, *Theme* follows your current theme. Removed or
@@ -139,8 +142,8 @@ panels the mouse wheel only scrolls; it never changes a setting.
   goes on; then it coasts forward into its resting places, never moving back),
   and *Pan* slides past them with parallax.
   Dive and Pan look best with a few depth layers.
-- **My looks**: *Save look* keeps the weather, glyphs, light and colours under
-  a name (up to 12); tap one to use it, right-click twice to delete it. *Copy
+- **My looks**: *Save look* keeps the weather, glyphs, light and colours (including the Theme colour) under
+  a name (up to 12); tap one to use it, drag it to move it, right-click twice to delete it. *Copy
   code* puts the current look on the clipboard as an `MR1:` code; *Paste code*
   adds a look from the clipboard.
 - **Workspaces**: one chip per workspace (1–5). Tap it to step through your
@@ -160,7 +163,8 @@ panels the mouse wheel only scrolls; it never changes a setting.
   (100% is the original).
 - **Light**: *Head glow*, *Bloom* (a soft halo), *Colour fringe* (red/blue
   edges) and *Vignette*. *Heads*: the look's own, white, the body colour or the
-  theme accent. *Colour for* chooses what the colour chips paint: *The rain*,
+  theme accent, for the rain, all depth layers or one layer (it follows
+  *Colour for*). *Colour for* chooses what the colour chips paint: *The rain*,
   *All depth layers*, one layer (*Layer 1* is just behind the rain; colours
   blend between layers and travel with them in a Dive), or *Theme*, the only
   way to change the Omarchy theme (Theme and Daylight aren't offered there).

@@ -211,7 +211,7 @@ Item {
     if (!service) return "front"
     if (t === "desktop" || t === "front") return t
     if (!service.depthOn) return "front"
-    if (t.indexOf("layer") === 0 && (service.depthLayers < 2 || Number(t.slice(5)) > service.depthLayers)) return "back"
+    if (t.indexOf("layer") === 0 && (service.depthLayers < 1 || Number(t.slice(5)) > service.depthLayers)) return "back"
     return t
   }
   function colorOn(name) {
@@ -354,16 +354,85 @@ Item {
           current: service ? service.rainPreset : ""
           pick: function(id) { if (service) service.applyRainPreset(id) }
         }
-        // Your saved looks, lit like a preset when the rain matches one.
-        ChipRow {
+        // Your saved looks, lit like a preset when the rain matches one. These
+        // wrap onto more lines (full names). Drag one to move it; a bar shows
+        // where it will land.
+        Flow {
+          id: looksFlow
           visible: !!service && service.savedLooks.length > 0
-          options: service ? service.savedLooks.map(function(l) { return l.name }) : []
-          labelOf: function(id) { return panel.confirmDelete === id ? "Delete?" : id }
-          isOn: function(id) { return panel.confirmDelete === id || (!!service && service.lookIs(id)) }
-          pick: function(id) { panel.confirmDelete = ""; if (service) service.recallLook(id) }
-          rightPick: function(id) {
-            if (panel.confirmDelete === id) { panel.confirmDelete = ""; if (service) service.deleteLook(id) }
-            else panel.confirmDelete = id
+          width: parent.width
+          spacing: 4
+          property int dragFrom: -1
+          property int dropAt: -1
+          property point dragPoint: Qt.point(0, 0)
+          // The look under a point in this Flow (-1 = none).
+          function indexAt(x, y) {
+            for (var i = 0; i < children.length; i++) {
+              var c = children[i]
+              if (c.lookIndex !== undefined && x >= c.x - 2 && x <= c.x + c.width + 2 && y >= c.y && y <= c.y + c.height)
+                return c.lookIndex
+            }
+            return -1
+          }
+          Repeater {
+            model: service ? service.savedLooks.map(function(l) { return l.name }) : []
+            Chip {
+              id: lookChip
+              required property string modelData
+              required property int index
+              readonly property int lookIndex: index
+              chipId: modelData
+              label: panel.confirmDelete === modelData ? "Delete?" : modelData
+              on: panel.confirmDelete === modelData || (!!service && service.lookIs(modelData))
+              opacity: looksFlow.dragFrom === index ? 0.35 : 1
+              // Where it will land: a bar on the side it goes to.
+              Rectangle {
+                visible: looksFlow.dragFrom >= 0 && looksFlow.dropAt === lookChip.index && looksFlow.dropAt !== looksFlow.dragFrom
+                width: 3; radius: 1
+                height: parent.height + 4
+                y: -2
+                x: looksFlow.dropAt > looksFlow.dragFrom ? parent.width + 1 : -4
+                color: panel.accent
+              }
+              MouseArea {
+                anchors.fill: parent
+                z: 2
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                preventStealing: true
+                property point start
+                cursorShape: looksFlow.dragFrom === lookChip.index ? Qt.ClosedHandCursor : Qt.PointingHandCursor
+                onPressed: mouse => { start = Qt.point(mouse.x, mouse.y) }
+                onPositionChanged: mouse => {
+                  if (!(mouse.buttons & Qt.LeftButton)) return
+                  var p = mapToItem(looksFlow, mouse.x, mouse.y)
+                  if (looksFlow.dragFrom < 0 && Math.abs(mouse.x - start.x) + Math.abs(mouse.y - start.y) > 8) {
+                    panel.confirmDelete = ""
+                    looksFlow.dragFrom = lookChip.index
+                  }
+                  if (looksFlow.dragFrom >= 0) {
+                    looksFlow.dragPoint = p
+                    var at = looksFlow.indexAt(p.x, p.y)
+                    if (at >= 0) looksFlow.dropAt = at
+                  }
+                }
+                onReleased: mouse => {
+                  if (looksFlow.dragFrom >= 0) {
+                    if (service && looksFlow.dropAt >= 0) service.moveLook(looksFlow.dragFrom, looksFlow.dropAt)
+                    looksFlow.dragFrom = -1; looksFlow.dropAt = -1
+                    return
+                  }
+                  var id = lookChip.modelData
+                  if (mouse.button === Qt.RightButton) {
+                    if (panel.confirmDelete === id) { panel.confirmDelete = ""; if (service) service.deleteLook(id) }
+                    else panel.confirmDelete = id
+                  } else {
+                    panel.confirmDelete = ""
+                    if (service) service.recallLook(id)
+                  }
+                }
+                onCanceled: { looksFlow.dragFrom = -1; looksFlow.dropAt = -1 }
+              }
+            }
           }
         }
         Row {
@@ -431,7 +500,7 @@ Item {
         }
         SliderRow {
           title: "Letter size"
-          minimum: 4; maximum: 28; step: 1; integer: true
+          minimum: 4; maximum: 100; step: 1; integer: true
           value: panel.letterSize
           format: function(v) { return Math.round(v) + " px" }
           onMoved: v => { if (service) service.letterSize = v }
@@ -547,9 +616,9 @@ Item {
         }
         SliderRow {
           title: "Depth layers"
-          visible: !!service && service.depthOn
-          minimum: 1; maximum: 5; step: 1; integer: true
+          minimum: 0; maximum: 5; step: 1; integer: true
           value: service ? service.depthLayers : 1
+          zeroIsOff: true
           format: function(v) { return Math.round(v) + (Math.round(v) === 1 ? " layer" : " layers") }
           onMoved: v => { if (service) service.depthLayers = v }
           onReleased: v => { if (service) service.setRainOption("depthLayers", v) }
@@ -592,13 +661,6 @@ Item {
       SectionBody {
         name: "COLOUR"
         ChipRow {
-          title: "Heads"
-          options: service ? service.headModes : []
-          labels: ({ look: "Look's own", body: "Body colour", accent: "Accent" })
-          current: service ? service.headColor : "look"
-          pick: function(id) { if (service) service.setRainOption("headColor", id) }
-        }
-        ChipRow {
           title: "Colour for"
           options: service && service.depthOn ? ["front", "back", "desktop"] : ["front", "desktop"]
           labels: ({ front: "The rain", back: "Depth layers", desktop: "Theme" })
@@ -607,7 +669,7 @@ Item {
         }
         // Single layers, only while Depth layers is picked (and there are several).
         ChipRow {
-          visible: !!service && service.depthOn && service.depthLayers > 1
+          visible: !!service && service.depthOn
                    && (panel.target === "back" || panel.target.indexOf("layer") === 0)
           title: " "
           options: {
@@ -618,6 +680,27 @@ Item {
           labels: ({ back: "All layers", layer1: "Layer 1", layer2: "Layer 2", layer3: "Layer 3", layer4: "Layer 4", layer5: "Layer 5" })
           current: panel.target
           pick: function(id) { panel.paintTarget = id }
+        }
+        // Heads follow Colour for: the rain, all depth layers, or one layer.
+        ChipRow {
+          visible: panel.target !== "desktop"
+          title: "Heads"
+          options: panel.target === "front" ? (service ? service.headModes : []) : [""].concat(service ? service.headModes : [])
+          labels: ({ "": panel.target === "back" ? "Same as the rain" : "Same as all layers", look: "Look's own", body: "Body colour", accent: "Accent" })
+          current: {
+            if (!service) return "look"
+            var t = panel.target
+            if (t === "back") return service.backHeadColor
+            if (t.indexOf("layer") === 0) return service.layerHeadColors[Number(t.slice(5)) - 1] || ""
+            return service.headColor
+          }
+          pick: function(id) {
+            if (!service) return
+            var t = panel.target
+            if (t === "back") service.setRainOption("backHeadColor", id)
+            else if (t.indexOf("layer") === 0) service.setLayerHead(Number(t.slice(5)), id)
+            else service.setRainOption("headColor", id)
+          }
         }
         Chip {
           visible: panel.target !== "front" && panel.target !== "desktop"
@@ -630,7 +713,7 @@ Item {
           // The theme can't take Theme (itself) or Daylight (changes all day).
           options: (panel.target === "desktop" ? ["green", "wallpaper"] : ["green", "theme", "daylight", "wallpaper"]).concat(Palette.presetNames)
           perLine: 8
-          labelOf: function(id) { return id.charAt(0).toUpperCase() + id.slice(1) }
+          labelOf: function(id) { return ({ hotpink: "Hot Pink" })[id] || (id.charAt(0).toUpperCase() + id.slice(1)) }
           swatchOf: function(id) {
             return id === "green" ? ["#e8ffe8", "#00ff41", "#005208"] : id === "theme" ? [panel.accent]
               : id === "daylight" ? [service ? Palette.daylight(service.dayHour) : "#7df9ff"]

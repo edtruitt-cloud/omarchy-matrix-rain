@@ -48,13 +48,13 @@ layout(std140, binding = 0) uniform buf {
     float bloom;
     float aberration;
     float vignette;
-    float headMode;    // 0 the look's own heads, 1 headFixed, 2 same as the body
-    vec4 headFixed;
+    float headMode;    // the rain's heads: 0 look's own, 1 white, 2 body colour, 3 accent
+    vec4 headFixed;    // the accent colour
     // Depth layer colours, as on the wallpaper: the rain is slot 0 and layer
     // k is slot k; slices pass through them with distance. layerSlots = the
     // number of layer slots in use (0 = everything in the rain's colour).
     float layerSlots;
-    vec4 l1Info;     // layer 1: mode, variation
+    vec4 l1Info;     // layer 1: mode, variation, heads (as headMode)
     vec4 l1Head;
     vec4 l1Body;
     vec4 l1Tail;
@@ -197,10 +197,15 @@ vec3 glyphColor(float dist, float intensity, vec2 id, float screenY, float t, fl
         bodyCol = mix(bodyCol, b2, f);
         tailCol = mix(tailCol, t2, f);
     }
-    if (headMode > 1.5)
-        headCol = bodyCol;
-    else if (headMode > 0.5)
+    // Heads of the nearest slot (the rain's for the nearest slices).
+    int hk = int(floor(pos + 0.5));
+    float hm = hk <= 0 ? headMode : hk == 1 ? l1Info.z : hk == 2 ? l2Info.z : hk == 3 ? l3Info.z : hk == 4 ? l4Info.z : l5Info.z;
+    if (hm > 2.5)
         headCol = headFixed.rgb;
+    else if (hm > 1.5)
+        headCol = bodyCol;
+    else if (hm > 0.5)
+        headCol = vec3(1.0);
     float headMix = 1.0 - smoothstep(0.0, 0.045 * (1.0 + 2.5 * headGlow), dist);
     vec3 color = mix(tailCol, bodyCol, intensity);
     color = mix(color, headCol, headMix);
@@ -319,7 +324,7 @@ void main() {
         p.x += sin(t * 0.19 + fi * 0.4) * 0.22;
 
         // Glyph size follows the wallpaper's letter size (16 px = 1.0).
-        float cell = 0.10 * clamp(cellScale, 0.4, 1.8);
+        float cell = 0.10 * clamp(cellScale, 0.4, 6.5);
         float pitch = cell * 1.38;
         float col = floor(p.x / pitch);
         float row = floor(p.y / cell);

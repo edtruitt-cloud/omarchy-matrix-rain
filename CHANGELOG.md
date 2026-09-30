@@ -1,5 +1,42 @@
 # Changelog
 
+## Heads per layer (2026-09-29)
+
+- The Heads row follows Colour for: the rain, all depth layers ("Same as the
+  rain"), or one layer ("Same as all layers"). Saved in looks and codes; the
+  screensaver follows them too.
+- Fixed: the screensaver drew Accent heads in the body colour.
+
+## Five unusual colours, letters up to 100 px (2026-09-29)
+
+- New singles: Eclipse (near-black, gold heads), Blacklight (indigo, neon
+  yellow heads), Copper (trails age into verdigris), Ivory and Mustard, each
+  at least 21 apart from every other colour.
+- Letter size goes up to 100 px (was 28), in the wallpaper and screensaver.
+
+## Rearrange saved looks (2026-09-28)
+
+- Drag a saved look to move it; an accent bar shows where it lands. Click
+  still loads it, right-click twice still deletes it. The order is saved.
+- Saved looks (and look codes) include the Theme colour, which comes back when
+  you load the look (not on workspace switches). Saving over a look's name
+  keeps its place.
+
+## Forest and eight more singles (2026-09-28)
+
+- New gradient Forest: leaf green at the top, deeper green, bark brown, then
+  grey-brown stone (some streams darker).
+- New singles Amber, Chocolate, Wine, Hot Pink, Orchid, Navy, Teal and Pine,
+  each at least 23 apart from every other colour (CIE Lab). "teal" is its own
+  colour again instead of an old name for Cyan.
+
+## Depth layers (2026-09-28)
+
+- Depth layers can be 0 (off), and the slider always shows.
+- Colour for → Depth layers always offers Layer 1 on its own, even with a
+  single layer.
+- Saved looks wrap onto more lines so their names show in full.
+
 ## Ready to share (2026-09-28)
 
 - Typing ripples start off on new installs (they add key hooks).
