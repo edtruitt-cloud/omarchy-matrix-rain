@@ -1,5 +1,10 @@
 # Changelog
 
+## Get Sound Lab (2026-09-29)
+
+- Reactions shows whether Sound Lab is installed and on, with Get Sound Lab
+  (runs `omarchy plugin add`) or Turn on Sound Lab when it isn't.
+
 ## Heads per layer (2026-09-29)
 
 - The Heads row follows Colour for: the rain, all depth layers ("Same as the

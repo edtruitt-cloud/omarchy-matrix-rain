@@ -680,6 +680,43 @@ Item {
   }
 
   // --- reactions
+  // --- Getting Sound Lab: whether it's installed ("missing", "disabled",
+  // "enabled"; "" = not checked yet), and a one-click install or enable with
+  // Omarchy's own plugin commands.
+  readonly property string soundLabUrl: "https://github.com/edtruitt-cloud/omarchy-sound-lab.git"
+  property string soundLabState: ""
+  property string soundLabStatus: ""
+  function checkSoundLab() { if (!pluginListProc.running) pluginListProc.running = true }
+  function readPluginList(text) {
+    var list
+    try { list = JSON.parse(text) } catch (e) { return }
+    var me = (Array.isArray(list) ? list : []).filter(function(x) { return x && x.id === "ertiv.sound-lab" })[0]
+    root.soundLabState = !me ? "missing" : me.enabled ? "enabled" : "disabled"
+  }
+  function getSoundLab() {
+    if (pluginAddProc.running) return false
+    var add = root.soundLabState === "missing"
+    root.soundLabStatus = add ? "Installing Sound Lab…" : "Turning on Sound Lab…"
+    pluginAddProc.command = add ? ["omarchy", "plugin", "add", root.soundLabUrl, "--enable", "--yes"]
+                                : ["omarchy", "plugin", "enable", "ertiv.sound-lab"]
+    pluginAddProc.running = true
+    return true
+  }
+  Process {
+    id: pluginListProc
+    command: root.timeoutPrefix.concat(["omarchy", "plugin", "list", "--json"])
+    stdout: StdioCollector { onStreamFinished: root.readPluginList(text) }
+  }
+  Process {
+    id: pluginAddProc
+    stderr: StdioCollector { id: pluginAddErr }
+    onExited: (code) => {
+      root.soundLabStatus = code === 0 ? "" : "Couldn't get Sound Lab: " + (String(pluginAddErr.text || "").trim().split("\n").pop() || "exit " + code)
+      root.checkSoundLab()
+    }
+  }
+  onSoundLinkedChanged: checkSoundLab()
+
   // A kick Sound Lab just played.
   // Switching workspace sends a short rush down the rain (it never slides sideways).
   function workspaceSwitched(id) {
@@ -1633,6 +1670,7 @@ Item {
     onExited: {
       if (!root._stateLoaded) root._stateLoaded = true
       themeCheckProc.running = true
+      root.checkSoundLab()
       var mon = Hyprland.focusedMonitor
       if (mon && mon.activeWorkspace) root.workspaceSwitched(mon.activeWorkspace.id)
     }

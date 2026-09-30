@@ -796,8 +796,25 @@ Item {
           onMoved: v => { if (service) service.cpuPull = v }
           onReleased: v => { if (service) service.setRainOption("cpuPull", v) }
         }
-        Note {
-          text: service && service.soundLinked ? "Sound Lab connected" + (service.linkPlaying ? " · playing" : "") : "Sound Lab not running"
+        Row {
+          width: parent.width
+          spacing: 8
+          Note {
+            width: Math.min(implicitWidth, parent.width - (getSound.visible ? getSound.width + 8 : 0))
+            anchors.verticalCenter: parent.verticalCenter
+            text: !service ? "" : service.soundLabStatus !== "" ? service.soundLabStatus
+              : service.soundLinked ? "Sound Lab connected" + (service.linkPlaying ? " · playing" : "")
+              : service.soundLabState === "missing" ? "Sound Lab isn't installed"
+              : service.soundLabState === "disabled" ? "Sound Lab is turned off" : "Sound Lab not running"
+          }
+          // Sound Lab is the companion synth: get it or turn it on from here.
+          Chip {
+            id: getSound
+            visible: !!service && !service.soundLinked && (service.soundLabState === "missing" || service.soundLabState === "disabled")
+            chipId: "getSoundLab"
+            label: service && service.soundLabState === "disabled" ? "Turn on Sound Lab" : "Get Sound Lab"
+            onTap: function() { if (service) service.getSoundLab() }
+          }
         }
       }
 

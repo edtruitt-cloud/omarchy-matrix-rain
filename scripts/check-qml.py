@@ -361,6 +361,11 @@ ShellRoot {
         svc.startEvent("", true); if (!eventTimerRunning()) throw new Error("Schedule carries on after a chained glyph swap")
         function eventTimerRunning() { for (var c = 0; c < svc.resources.length; c++) { var r = svc.resources[c]; if (r.running && r.interval >= 60000) return true } return false }
         svc.setRainOption("eventRate", "off"); svc.swapSet = ""; svc.eventsOn = svc.eventNames.slice()
+        // Getting Sound Lab: the plugin list says whether it's installed and on.
+        svc.readPluginList('[{"id": "ertiv.matrix-rain", "enabled": true}]'); if (svc.soundLabState !== "missing") throw new Error("Sound Lab missing")
+        svc.readPluginList('[{"id": "ertiv.sound-lab", "enabled": false}]'); if (svc.soundLabState !== "disabled") throw new Error("Sound Lab disabled")
+        svc.readPluginList('[{"id": "ertiv.sound-lab", "enabled": true}]'); if (svc.soundLabState !== "enabled") throw new Error("Sound Lab enabled")
+        svc.readPluginList('garbage'); if (svc.soundLabState !== "enabled") throw new Error("Bad list keeps the last state")
         svc.toggleSection("EVENTS"); if (svc.collapsedSections.join() !== "EVENTS" || JSON.parse(svc.statePayload()).collapsedSections[0] !== "EVENTS") throw new Error("Fold a section")
         // Events switched off never happen by themselves.
         svc.eventsOn = []
@@ -370,6 +375,11 @@ ShellRoot {
         svc.startEvent("rewind"); svc.toggleEvent("rewind"); if (svc.activeEvent !== "") throw new Error("Switching an event off stops it")
         svc.eventsOn = ["binary"]; svc.startEvent("binary"); svc.toggleEvent("binary"); if (svc.swapSet !== "") throw new Error("Switching Glyph swap off stops it")
         svc.eventsOn = svc.eventNames.slice()
+        // Getting Sound Lab: the plugin list says whether it's installed and on.
+        svc.readPluginList('[{"id": "ertiv.matrix-rain", "enabled": true}]'); if (svc.soundLabState !== "missing") throw new Error("Sound Lab missing")
+        svc.readPluginList('[{"id": "ertiv.sound-lab", "enabled": false}]'); if (svc.soundLabState !== "disabled") throw new Error("Sound Lab disabled")
+        svc.readPluginList('[{"id": "ertiv.sound-lab", "enabled": true}]'); if (svc.soundLabState !== "enabled") throw new Error("Sound Lab enabled")
+        svc.readPluginList('garbage'); if (svc.soundLabState !== "enabled") throw new Error("Bad list keeps the last state")
         svc.toggleSection("EVENTS"); if (svc.collapsedSections.length) throw new Error("Unfold a section")
         svc.eventsOn = svc.eventNames.slice()
         svc.applyRainPreset("classic"); if (svc.crtAmount !== 1) throw new Error("Classic runs on a full CRT")
