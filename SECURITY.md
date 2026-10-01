@@ -34,3 +34,7 @@ recorded in `$XDG_RUNTIME_DIR/ertiv-matrix-rain-keys.json` are removed.
 Custom glyphs run `tools/custom-glyphs.py` only when you press Use symbols. It
 reads installed fonts (fontconfig) and draws the symbols to the state folder;
 nothing is sent anywhere.
+
+Workspace see-through adds named Hyprland window rules at runtime
+(`hyprctl eval`), one per workspace you set, and disables them when set to 0%
+or when the plugin unloads. Nothing is written to your Hyprland config.

@@ -29,7 +29,7 @@ Window {
   readonly property real walkSpeed: Math.max(0.5, Math.min(4.0, 1.85 * Math.sqrt(setting("speed", 0.15, 0.02, 1.0) / 0.15)))
   // Density 0.75 (default) gives the original 0.90 of columns.
   readonly property real density: Math.min(0.98, setting("density", 0.75, 0.5, 1.0) * 1.2)
-  readonly property real cellScale: setting("letterSize", 16, 4, 100) / 16
+  readonly property real cellScale: setting("letterSize", 16, 4, 200) / 16
   readonly property real trailScale: setting("trailScale", 1, 0.5, 2)
   readonly property real glyphFlicker: setting("glyphFlicker", 1, 0, 2)
   readonly property real crt: setting("crtAmount", 0, 0, 1)
@@ -185,7 +185,9 @@ Window {
     if (chained) {
       // Chain events: one sets off another, up to four in a row.
       win.chainLeft--
-      chainTimer.restart()
+      var name = win.eventsOn[Math.floor(Math.random() * win.eventsOn.length)] || ""
+      if (name === "binary") { win.startGlyphSwap(); win.scheduleEvent() }
+      else { chainTimer.next = name; chainTimer.restart() }
     } else {
       win.chainLeft = 0
       scheduleEvent()
@@ -194,8 +196,11 @@ Window {
 
   Timer {
     id: chainTimer
-    interval: 350
-    onTriggered: if (!win.startEvent("", true)) win.scheduleEvent()
+    // As on the wallpaper: the next chained event 5 s later; a Glyph swap
+    // at once (it runs alongside).
+    interval: 5000
+    property string next: ""
+    onTriggered: if (!next || !win.startEvent(next, true)) win.scheduleEvent()
   }
 
   Timer {

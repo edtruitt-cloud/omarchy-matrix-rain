@@ -1,5 +1,42 @@
 # Changelog
 
+## Look codes carry Custom glyphs (2026-09-30)
+
+- Copy code on a Custom look puts the drawn symbols and pictures in the
+  code (a greyscale PNG strip, no file paths), and Paste code brings them
+  back exactly, as finished glyphs saved under the state folder's shared/.
+- Saved looks keep their own Custom symbols and pictures and redraw them
+  when recalled.
+
+## See-through windows per workspace (2026-09-29)
+
+- Workspaces → See-through: how see-through each workspace's windows are,
+  through runtime Hyprland window rules (not written to config, removed on
+  unload). Windows Omarchy keeps opaque stay opaque.
+- Panel order: Weather, Look, Colour, Reactions, Events, Workspaces,
+  Fullscreen.
+
+## Clearer pictures, letters up to 200 px (2026-09-29)
+
+- Pictures as glyphs keep their detail: the subject is found by how its
+  colours differ from the background, with its light and dark kept, and no
+  hairline thickening. Pictures no longer there drop off the list.
+- Letter size goes up to 200 px (was 100).
+- Every rain slider has − and + buttons that step by exactly one unit (1 px,
+  1 layer, or 1%).
+- Small pictures are enlarged and sharpened when it measures crisper (an AI
+  upscale with realesrgan-ncnn-vulkan if installed); custom glyphs are drawn
+  at 256 px cells.
+
+## Chain delay, pictures as glyphs (2026-09-29)
+
+- Chained events come 5 seconds after the previous one (wallpaper and
+  screensaver); a chained Glyph swap starts at once, and the chain carries on.
+- Custom glyphs take pictures too, chosen with Add pictures… in the file
+  picker (opens in Downloads; right-click a picture to remove it),
+  turned into one-colour glyphs from their transparency or their drawing
+  against the background, cleaned up like symbols.
+
 ## Get Sound Lab (2026-09-29)
 
 - Reactions shows whether Sound Lab is installed and on, with Get Sound Lab

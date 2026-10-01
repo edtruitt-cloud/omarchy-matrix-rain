@@ -72,6 +72,27 @@ def main():
     multi_names = re.search(r'var multiNames = \[([^\]]*)\]', pal).group(1)
     names = re.findall(r'"(\w+)"', multi_names)
     assert len(names) == len(set(names)) and all(re.search(r'\n    ' + n + r': \{ mode:', pal) for n in names), names
+    # Look codes carry Custom glyphs: the drawn glyphs go in the code (not
+    # your file paths) and come back, pixel for pixel, as finished glyphs.
+    import subprocess, sys, tempfile
+    tool = ROOT / 'tools' / 'look-code.py'
+    with tempfile.TemporaryDirectory() as tmp:
+        atlas = Path(tmp) / 'atlas.png'
+        made = json.loads(subprocess.run([sys.executable, str(ROOT / 'tools' / 'custom-glyphs.py'), 'A★', str(atlas)],
+                                         capture_output=True, text=True, check=True).stdout.strip().splitlines()[-1])
+        look = {'glyphSet': 'custom', 'name': 'Mine', 'custom': {'chars': made['chars'], 'images': '/home/me/secret.png', 'count': made['count']}}
+        code = subprocess.run([sys.executable, str(tool), 'pack', str(atlas), json.dumps(look)],
+                              capture_output=True, text=True, check=True).stdout
+        assert code.startswith('MR1:') and 'secret' not in code
+        back = json.loads(subprocess.run([sys.executable, str(tool), 'unpack', str(Path(tmp) / 'shared')], input=code,
+                                         capture_output=True, text=True, check=True).stdout)
+        files = back['custom']['images']
+        assert back['name'] == 'Mine' and back['custom']['chars'] == '' and len(files) == made['count'], back
+        again = Path(tmp) / 'again.png'
+        subprocess.run([sys.executable, str(ROOT / 'tools' / 'custom-glyphs.py'), '', str(again)] + files, capture_output=True, check=True)
+        from PIL import Image
+        assert Image.open(atlas).getchannel('A').tobytes() == Image.open(again).getchannel('A').tobytes()
+        assert subprocess.run([sys.executable, str(tool), 'unpack', tmp], input='hello', capture_output=True, text=True).stdout == ''
     print('PASS: atlas.js/atlas.json/atlas.png agree; rain clock wraps on whole cycles; the wheel only scrolls')
 
 

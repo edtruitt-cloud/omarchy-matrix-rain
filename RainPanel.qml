@@ -204,6 +204,9 @@ Item {
   // Which layers a colour chip paints: the rain, or the depth layers behind.
   property string paintTarget: "front"
   property string confirmDelete: ""
+  // The workspace whose window see-through the slider sets (starts on the
+  // one you're on).
+  property int opacityWs: service && service._lastWorkspace >= 1 && service._lastWorkspace <= 5 ? service._lastWorkspace : 1
 
   // The chosen target, falling back to the rain when its layer is gone.
   readonly property string target: {
@@ -273,6 +276,14 @@ Item {
     property bool zeroIsOff: false
     signal moved(real v)
     signal released(real v)
+    // −/+ fine-tune by exactly one unit: 1 for whole numbers, else 0.01 (1%).
+    readonly property real fine: integer ? 1 : 0.01
+    function nudge(dir) {
+      var v = Math.round((sr.value + dir * sr.fine) / sr.fine) * sr.fine
+      v = Math.max(sr.minimum, Math.min(sr.maximum, v))
+      sr.moved(v)
+      sr.released(v)
+    }
     width: parent ? parent.width : 300
     spacing: Style.space(8)
     Text {
@@ -285,15 +296,17 @@ Item {
       font.family: panel.fontFamily
       font.pixelSize: Style.font.body
     }
+    Chip { id: srDown; chipId: "down"; label: "−"; fixedWidth: 26; onTap: function() { sr.nudge(-1) } }
     MatrixSlider {
       bar: panel.bar
-      width: sr.width - srTitle.width - srValue.width - 2 * sr.spacing
+      width: sr.width - srTitle.width - srValue.width - srDown.width - srUp.width - 4 * sr.spacing
       height: Style.space(24)
       minimum: sr.minimum; maximum: sr.maximum; step: sr.step; integer: sr.integer
       value: sr.value
       onMoved: function(v) { sr.moved(v) }
       onReleased: function(v) { sr.released(v) }
     }
+    Chip { id: srUp; chipId: "up"; label: "+"; fixedWidth: 26; onTap: function() { sr.nudge(1) } }
     Text {
       id: srValue
       width: Style.space(62); height: Style.space(24)
@@ -494,13 +507,37 @@ Item {
             onTap: function() { if (service) service.setCustomGlyphs(customField.text) }
           }
         }
+        // Pictures: pick them in the file picker; right-click one to remove it.
+        Flow {
+          visible: !!service && service.glyphSet === "custom"
+          width: parent.width
+          spacing: 4
+          Chip {
+            chipId: "pick"
+            label: "Add pictures…"
+            onTap: function() { if (service) service.pickPictures(customField.text) }
+          }
+          Repeater {
+            model: service ? service.customPictureList : []
+            Chip {
+              required property string modelData
+              chipId: modelData
+              label: {
+                var f = modelData.split("/").pop()
+                // Glyphs from a pasted look code: 00.glyph.png → shared 1
+                return /^\d+\.glyph\.png$/.test(f) ? "🖼 shared " + (parseInt(f, 10) + 1) : "🖼 " + f
+              }
+              onRightTap: function(id) { if (service) service.removePicture(id) }
+            }
+          }
+        }
         Note {
           visible: !!service && service.glyphSet === "custom" && service.customStatus !== ""
           text: service ? service.customStatus : ""
         }
         SliderRow {
           title: "Letter size"
-          minimum: 4; maximum: 100; step: 1; integer: true
+          minimum: 4; maximum: 200; step: 1; integer: true
           value: panel.letterSize
           format: function(v) { return Math.round(v) + " px" }
           onMoved: v => { if (service) service.letterSize = v }
@@ -637,23 +674,6 @@ Item {
           options: ["sharp", "balanced", "fast"]
           current: service ? service.depthQuality : "balanced"
           pick: function(id) { if (service) service.setRainOption("depthQuality", id) }
-        }
-      }
-
-      Section { name: "WORKSPACES" }
-      SectionBody {
-        name: "WORKSPACES"
-        // One chip per workspace: tap steps to the next saved look, right-click back.
-        ChipRow {
-          fill: true
-          options: [1, 2, 3, 4, 5]
-          labelOf: function(ws) {
-            var c = service ? (service.workspaceLooks[String(ws)] || "") : ""
-            return ws + " · " + (c.indexOf("look:") === 0 ? c.slice(5) : "Your look")
-          }
-          isOn: function(ws) { return !!service && !!service.workspaceLooks[String(ws)] }
-          pick: function(id) { if (service) service.cycleWorkspaceLook(Number(id), 1) }
-          rightPick: function(id) { if (service) service.cycleWorkspaceLook(Number(id), -1) }
         }
       }
 
@@ -845,6 +865,41 @@ Item {
           value: service ? service.chainChance : 0
           onMoved: v => { if (service) service.chainChance = v }
           onReleased: v => { if (service) service.setRainOption("chainChance", v) }
+        }
+      }
+
+      Section { name: "WORKSPACES" }
+      SectionBody {
+        name: "WORKSPACES"
+        // One chip per workspace: tap steps to the next saved look, right-click back.
+        ChipRow {
+          fill: true
+          options: [1, 2, 3, 4, 5]
+          labelOf: function(ws) {
+            var c = service ? (service.workspaceLooks[String(ws)] || "") : ""
+            return ws + " · " + (c.indexOf("look:") === 0 ? c.slice(5) : "Your look")
+          }
+          isOn: function(ws) { return !!service && !!service.workspaceLooks[String(ws)] }
+          pick: function(id) { if (service) service.cycleWorkspaceLook(Number(id), 1) }
+          rightPick: function(id) { if (service) service.cycleWorkspaceLook(Number(id), -1) }
+        }
+        // Window see-through for one workspace at a time.
+        ChipRow {
+          title: "See-through"
+          options: [1, 2, 3, 4, 5]
+          labelOf: function(ws) {
+            var v = service ? (service.workspaceOpacity[String(ws)] || 0) : 0
+            return ws + (v > 0 ? " · " + Math.round(v * 100) + "%" : "")
+          }
+          isOn: function(ws) { return panel.opacityWs === Number(ws) }
+          pick: function(id) { panel.opacityWs = Number(id) }
+        }
+        SliderRow {
+          title: "Windows on " + panel.opacityWs
+          zeroIsOff: true
+          minimum: 0; maximum: 0.9
+          value: service ? (service.workspaceOpacity[String(panel.opacityWs)] || 0) : 0
+          onReleased: v => { if (service) service.setWorkspaceOpacity(panel.opacityWs, v) }
         }
       }
 

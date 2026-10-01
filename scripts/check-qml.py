@@ -49,7 +49,7 @@ ShellRoot {
         stop()
         svc.applyStateText("{not json"); if(!svc._stateCorrupt) throw new Error("Corrupt state flag")
         svc._stateCorrupt=false
-        svc.applyLetterSize(1000); if(svc.letterSize!==100) throw new Error("Clamp failed")
+        svc.applyLetterSize(1000); if(svc.letterSize!==200) throw new Error("Clamp failed")
         svc.applyLetterSize(16)
         svc.pauseOnFullscreen=true; svc.fullscreenOverride={A:true}
         if (svc.screenCanAnimate("A") || !svc.screenCanAnimate("B")) throw new Error("Per-monitor fullscreen gating")
@@ -245,10 +245,14 @@ ShellRoot {
         svc.startEvent("cascade"); svc.advanceRain(1.0); var c1 = svc.cascadeT; svc.advanceRain(1.0)
         if (!(c1 > 0 && svc.cascadeT > c1)) throw new Error("Cascade sweeps")
         for (wi = 0; wi < 20; wi++) svc.advanceRain(0.1); if (svc.cascadeT !== 0) throw new Error("Cascade ends")
-        // Chained events: with 100% another starts after one ends, at most three more.
+        // Chained events: with 100% another is lined up when one ends, 5 s
+        // later, at most three more; a chained Glyph swap starts at once.
         svc.setRainOption("chainChance", 1); svc.eventsOn = ["scramble"]; svc.startEvent("scramble")
         for (wi = 0; wi < 10; wi++) svc.advanceRain(0.1)
-        if (svc._chainLeft !== 2) throw new Error("Chain counts down")
+        if (svc._chainLeft !== 2 || svc._chainNext !== "scramble" || svc.activeEvent !== "") throw new Error("Chain waits for the next link")
+        svc._chainNext = ""; svc.eventsOn = ["binary"]; svc._chainLeft = 2; svc.chainNext()
+        if (svc.swapSet === "" || svc._chainNext !== "") throw new Error("A chained glyph swap starts at once")
+        svc.swapSet = ""; svc.eventsOn = ["scramble"]
         svc.setRainOption("chainChance", 0); svc._chainLeft = 0
         // Glyph sets, head colour, back layers.
         if (svc.setRainOption("glyphSet", "wingdings") || !svc.setRainOption("glyphSet", "hex")) throw new Error("Glyph set option")
@@ -258,6 +262,15 @@ ShellRoot {
         svc.setRainOption("glyphSet", "alchemy"); if (svc.glyphRange.x !== 352) throw new Error("Alchemy")
         // Custom: without checked symbols it draws the rain's own glyphs; a result sets it up.
         svc.setRainOption("glyphSet", "custom"); if (svc.customShown || svc.glyphRange.y !== 177) throw new Error("Empty custom falls back")
+        svc.customResult('{"chars": "卐★", "count": 2, "rows": 1, "removed": [{"ch": "x", "why": "no installed font can draw it"}], "cleaned": [{"ch": "★", "what": "thickened"}]}')
+        // Picked pictures join the list (no duplicates); removing one drops it.
+        svc.customImages = "/a/one.png"; svc._pickText = "★"
+        var picked = svc.addPictures("/a/one.png\n/b/two.jpg\n")
+        if (!picked || svc.customPictureList.join() !== "/a/one.png,/b/two.jpg") throw new Error("Add pictures: " + svc.customImages)
+        if (svc.addPictures("")) throw new Error("Cancelled picker adds nothing")
+        svc.customImages = ""
+        svc.customResult('{"chars": "卐★", "count": 4, "images": 2, "rows": 1, "removed": [], "cleaned": []}')
+        if (svc.customStatus.indexOf("2 symbols and 2 images") < 0) throw new Error("Images counted: " + svc.customStatus)
         svc.customResult('{"chars": "卐★", "count": 2, "rows": 1, "removed": [{"ch": "x", "why": "no installed font can draw it"}], "cleaned": [{"ch": "★", "what": "thickened"}]}')
         if (!svc.customShown || svc.glyphRange.x !== 0 || svc.glyphRange.y !== 2 || svc.customStatus.indexOf("★ thickened") < 0 || svc.customStatus.indexOf("left out x") < 0) throw new Error("Custom symbols in use")
         if (JSON.parse(svc.statePayload()).customChars !== "卐★") throw new Error("Custom saved")
@@ -316,6 +329,11 @@ ShellRoot {
         var code = svc.lookCode("Shared"); if (code.indexOf("MR1:") !== 0 || svc.readLookCode(code).glyphSet !== "runes") throw new Error("Look code")
         if (svc.readLookCode("MR1:!!!") || svc.readLookCode("hello")) throw new Error("Bad codes rejected")
         svc.setRainOption("gravity", 0); if (svc.importLook(code) !== "Shared" || svc.gravity !== 0.4 || svc.savedLooks.length !== 2) throw new Error("Import look")
+        // A look with Custom glyphs brings its glyphs back (a pasted code's are files).
+        if (svc.currentLook().custom !== undefined) throw new Error("Only Custom looks carry glyphs")
+        if (svc.importLookObject({ name: "Shared glyphs", glyphSet: "custom", custom: { chars: "", images: ["/nowhere/00.glyph.png"] } }) !== "Shared glyphs"
+            || svc.customImages !== "/nowhere/00.glyph.png" || svc.customChars !== "") throw new Error("Shared glyphs")
+        svc.deleteLook("Shared glyphs"); svc.setRainOption("glyphSet", "runes")
         var saved2 = JSON.parse(svc.statePayload()); if (saved2.savedLooks.length !== 2 || saved2.glyphSet !== "runes" || saved2.eventsVersion !== 2) throw new Error("Looks saved")
         svc.applyStateText(JSON.stringify({eventsOn: ["dejavu"]})); if (svc.eventsOn.join() !== "dejavu,drift,cascade") throw new Error("New events join old lists")
         // Workspace looks: a saved look per workspace; your own look returns.
@@ -366,6 +384,14 @@ ShellRoot {
         svc.readPluginList('[{"id": "ertiv.sound-lab", "enabled": false}]'); if (svc.soundLabState !== "disabled") throw new Error("Sound Lab disabled")
         svc.readPluginList('[{"id": "ertiv.sound-lab", "enabled": true}]'); if (svc.soundLabState !== "enabled") throw new Error("Sound Lab enabled")
         svc.readPluginList('garbage'); if (svc.soundLabState !== "enabled") throw new Error("Bad list keeps the last state")
+        // Window see-through per workspace: a named, disable-able rule per workspace.
+        if (svc.setWorkspaceOpacity(7, 0.5)) throw new Error("Workspace range")
+        svc.setWorkspaceOpacity(2, 5); if (svc.workspaceOpacity["2"] !== 0.9) throw new Error("See-through clamp")
+        var lua = svc.opacityRuleLua(2)
+        if (lua.indexOf('name = "ertiv-matrix-rain-ws2"') < 0 || lua.indexOf('workspace = "2"') < 0 || lua.indexOf('opacity = "0.10 0.10"') < 0 || lua.indexOf("enabled = true") < 0) throw new Error("Rule: " + lua)
+        svc.setWorkspaceOpacity(2, 0); if (svc.workspaceOpacity["2"] !== undefined || svc.opacityRuleLua(2).indexOf("enabled = false") < 0) throw new Error("See-through off")
+        svc.setWorkspaceOpacity(3, 0.3); if (JSON.parse(svc.statePayload()).workspaceOpacity["3"] !== 0.3) throw new Error("See-through saved")
+        svc.setWorkspaceOpacity(3, 0)
         svc.toggleSection("EVENTS"); if (svc.collapsedSections.join() !== "EVENTS" || JSON.parse(svc.statePayload()).collapsedSections[0] !== "EVENTS") throw new Error("Fold a section")
         // Events switched off never happen by themselves.
         svc.eventsOn = []

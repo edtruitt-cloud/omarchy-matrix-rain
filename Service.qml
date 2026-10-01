@@ -170,16 +170,19 @@ Item {
   // so it reads as rain (locally; nothing is sent anywhere).
   readonly property string customAtlasPath: stateDir + "/custom-glyphs.png"
   property string customChars: ""      // the symbols in use (checked)
+  property string customImages: ""     // image files / folders, separated by ;
   property int customCount: 0
   property int customRows: 0
   property int customRev: 0            // bumped to reload the texture
   property string customStatus: ""
   readonly property bool customBusy: customProc.running
-  function setCustomGlyphs(text) {
+  function setCustomGlyphs(text, images) {
     var t = String(text || "").slice(0, 200)
+    if (images !== undefined) root.customImages = String(images).slice(0, 8000)
     if (customProc.running) return false
     root.customStatus = "Drawing your symbols…"
-    customProc.command = ["python3", root.pluginDir + "/tools/custom-glyphs.py", t, root.customAtlasPath]
+    var pics = root.customImages.split(";").map(function(x) { return x.trim() }).filter(function(x) { return x !== "" })
+    customProc.command = ["python3", root.pluginDir + "/tools/custom-glyphs.py", t, root.customAtlasPath].concat(pics)
     customProc.running = true
     return true
   }
@@ -191,16 +194,57 @@ Item {
       return
     }
     root.customChars = String(r.chars || "")
+    // Pictures that are no longer there drop off the list.
+    if (Array.isArray(r.missing) && r.missing.length) {
+      var gone = r.missing.map(String)
+      root.customImages = root.customPictureList.filter(function(f) {
+        var full = f.indexOf("~") === 0 ? root.home + f.slice(1) : f
+        return gone.indexOf(full) < 0 && gone.indexOf(f) < 0
+      }).join(";")
+    }
     root.customCount = r.count
     root.customRows = r.rows
     root.customRev++
     var gone = (r.removed || []).map(function(x) { return x.ch + " (" + x.why + ")" })
     var tidy = (r.cleaned || []).map(function(x) { return x.ch + " " + x.what })
-    root.customStatus = (r.count ? "Using " + r.count + " symbol" + (r.count === 1 ? "" : "s") : "No symbols to use")
+    var pics = r.images || 0
+    root.customStatus = (r.count ? "Using " + (r.count - pics) + " symbol" + (r.count - pics === 1 ? "" : "s")
+        + (pics ? " and " + pics + " image" + (pics === 1 ? "" : "s") : "") : "No glyphs to use")
       + (tidy.length ? "; " + tidy.join(", ") : "")
       + (gone.length ? "; left out " + gone.join(", ") : "") + "."
     if (r.count > 0) root.glyphSet = "custom"
     persist()
+  }
+  // Pictures: pick them in the standard file picker (zenity), starting in
+  // Downloads; they are added to the pictures in use and drawn right away.
+  readonly property var customPictureList: customImages.split(";").map(function(x) { return x.trim() }).filter(function(x) { return x !== "" })
+  property string _pickText: ""
+  function pickPictures(text) {
+    if (pickProc.running) return false
+    root._pickText = text === undefined ? root.customChars : String(text)
+    var start = root.home + "/Downloads/"
+    pickProc.command = ["zenity", "--file-selection", "--multiple", "--separator=\n",
+      "--title=Pick pictures for the rain", "--filename=" + start,
+      "--file-filter=Images | *.png *.PNG *.jpg *.JPG *.jpeg *.webp *.gif *.bmp *.svg"]
+    pickProc.running = true
+    return true
+  }
+  function addPictures(text) {
+    var picked = String(text || "").split("\n").map(function(x) { return x.trim() }).filter(function(x) { return x !== "" })
+    if (!picked.length) return false
+    var list = root.customPictureList.slice()
+    picked.forEach(function(f) { if (list.indexOf(f) < 0) list.push(f) })
+    root.setCustomGlyphs(root._pickText, list.join(";"))
+    return true
+  }
+  function removePicture(path) {
+    var list = root.customPictureList.filter(function(x) { return x !== path })
+    return root.setCustomGlyphs(root.customChars, list.join(";"))
+  }
+  Process {
+    id: pickProc
+    stdout: StdioCollector { onStreamFinished: root.addPictures(text) }
+    onExited: (code) => { if (code === 127) root.customStatus = "The file picker (zenity) isn't installed." }
   }
   Process {
     id: customProc
@@ -370,7 +414,7 @@ Item {
   }
   readonly property real rainSize: {
     if (lfoDest !== "size") return letterSize
-    return clamp(letterSize * (1.0 + lfoDepth * (2.0 * lfoValue - 1.0) * 0.22), 4, 100)
+    return clamp(letterSize * (1.0 + lfoDepth * (2.0 * lfoValue - 1.0) * 0.22), 4, 200)
   }
 
   readonly property var rainPresets: Palette.presets
@@ -612,7 +656,7 @@ Item {
   }
 
   function applyLetterSize(v) {
-    root.letterSize = clamp(v, 4, 100)
+    root.letterSize = clamp(v, 4, 200)
     persist()
   }
 
@@ -627,7 +671,7 @@ Item {
   }
 
   function weatherValue(key, v) {
-    if (key === "letterSize") return clamp(v, 4, 100)
+    if (key === "letterSize") return clamp(v, 4, 200)
     if (key === "speed") return clamp(v, 0.02, 1.0)
     if (key === "density") return clamp(v, 0.5, 1.0)
     var r = root.rainAmountRanges[key]
@@ -735,6 +779,44 @@ Item {
   // workspace without one. Workspace looks never change the desktop theme.
   readonly property int workspaceCount: 5
   property var workspaceLooks: ({})
+  // Window see-through per workspace (0 = off, up to 0.9): Hyprland window
+  // rules added at runtime (hyprctl eval), never written to your config.
+  // Windows Omarchy keeps opaque (its default-opacity tag removed) stay so.
+  property var workspaceOpacity: ({})
+  function setWorkspaceOpacity(ws, amount) {
+    ws = Math.round(Number(ws))
+    if (!(ws >= 1 && ws <= root.workspaceCount)) return false
+    var next = Object.assign({}, root.workspaceOpacity)
+    var a = clamp(amount, 0, 0.9)
+    if (a <= 0) delete next[String(ws)]
+    else next[String(ws)] = Math.round(a * 100) / 100
+    root.workspaceOpacity = next
+    applyWorkspaceOpacity([ws])
+    persist()
+    return true
+  }
+  // The Lua for one workspace's rule: its windows at (1 - amount) when
+  // focused, a little lower when not; disabled at 0.
+  function opacityRuleLua(ws) {
+    var a = root.workspaceOpacity[String(ws)] || 0
+    var on = a > 0 && root.enabled && !root.shuttingDown
+    var active = (1 - a).toFixed(2), inactive = Math.max(0.05, (1 - a) * 0.96).toFixed(2)
+    return 'hl.window_rule({ name = "ertiv-matrix-rain-ws' + ws + '", enabled = ' + on + ', match = { workspace = "' + ws
+      + '", tag = "default-opacity" }, opacity = "' + active + ' ' + inactive + '" })'
+  }
+  property bool _opacityRules: false
+  function applyWorkspaceOpacity(list) {
+    var wss = list || [1, 2, 3, 4, 5]
+    var any = Object.keys(root.workspaceOpacity).length > 0
+    if (!any && !root._opacityRules) return
+    root._opacityRules = any
+    var code = wss.map(root.opacityRuleLua).join("; ")
+    opacityProc.command = root.timeoutPrefix.concat(["hyprctl", "eval", code])
+    if (!opacityProc.running) opacityProc.running = true
+    else opacityRetry.restart()
+  }
+  Process { id: opacityProc }
+  Timer { id: opacityRetry; interval: 300; onTriggered: root.applyWorkspaceOpacity() }
   property var workspaceBase: null
   property real wsFade: 1
   property var _wsPending: null
@@ -850,6 +932,9 @@ Item {
     l.layerColors = root.layerColors.slice()
     // The Omarchy theme's colour ("" = not set by Matrix Rain).
     l.themeColor = root.themeColor
+    // Custom glyphs go with the look (a share code carries the drawn glyphs
+    // themselves; see tools/look-code.py).
+    if (root.glyphSet === "custom") l.custom = { chars: root.customChars, images: root.customImages, count: root.customCount }
     return l
   }
   // quiet: a workspace look; the rain colour changes without retheming the desktop.
@@ -862,6 +947,12 @@ Item {
     root.layerHeadColors = cleanHeads(l.layerHeadColors)
     if (l.backColor === "" || (typeof l.backColor === "string" && validRainColor(l.backColor) !== "")) root.backColor = l.backColor === "" ? "" : validRainColor(l.backColor)
     root.layerColors = cleanLayerColors(l.layerColors)
+    if (l.glyphSet === "custom" && l.custom && typeof l.custom === "object") {
+      var chars = typeof l.custom.chars === "string" ? l.custom.chars : ""
+      var pics = Array.isArray(l.custom.images) ? l.custom.images.map(String).join(";")
+        : typeof l.custom.images === "string" ? l.custom.images : ""
+      if (chars !== root.customChars || pics !== root.customImages || root.customCount === 0) root.setCustomGlyphs(chars, pics)
+    }
     // The theme colour comes back too, except for workspace looks (a theme
     // change restarts the shell), and only when it differs.
     if (!quiet && typeof l.themeColor === "string" && l.themeColor !== "" && validRainColor(l.themeColor) !== root.themeColor)
@@ -966,15 +1057,18 @@ Item {
   }
   // Paste: add the look to Saved looks and use it.
   function importLook(code) {
-    var l = readLookCode(code)
-    if (!l) return ""
+    return importLookObject(readLookCode(code))
+  }
+  function importLookObject(l) {
+    if (!l || typeof l !== "object") return ""
     var name = String(l.name || "Pasted look").slice(0, 24)
     applyLook(l)
     return saveLook(name)
   }
   property string shareStatus: ""
   function copyLookCode(name) {
-    copyProc.command = ["wl-copy", "--", lookCode(name)]
+    var l = currentLook(); l.name = String(name || "Shared look").slice(0, 24)
+    copyProc.command = ["timeout", "-k", "1", "30"].concat(["python3", root.pluginDir + "/tools/look-code.py", "copy", root.customAtlasPath, JSON.stringify(l)])
     copyProc.running = true
     root.shareStatus = "Copied a code for this look. Paste it into Matrix Rain anywhere to use it."
   }
@@ -984,10 +1078,13 @@ Item {
   Process { id: copyProc }
   Process {
     id: pasteProc
-    command: ["wl-paste", "--no-newline"]
+    // Reads the clipboard; a code's Custom glyphs are saved in stateDir/shared.
+    command: ["timeout", "-k", "1", "30"].concat(["python3", root.pluginDir + "/tools/look-code.py", "paste", root.stateDir + "/shared"])
     stdout: StdioCollector {
       onStreamFinished: {
-        var n = root.importLook(String(text).slice(0, 4000))
+        var l = null
+        try { l = JSON.parse(String(text).trim() || "null") } catch (e) { l = null }
+        var n = root.importLookObject(l)
         root.shareStatus = n ? "Added \u201c" + n + "\u201d from the clipboard." : "The clipboard has no Matrix Rain look code (it starts with MR1:)."
       }
     }
@@ -1000,6 +1097,7 @@ Item {
   property bool _typingBound: false
   readonly property bool typingWanted: typingAmount > 0 && enabled && _stateLoaded && !shuttingDown
   onTypingWantedChanged: syncTypingKeys()
+  onEnabledChanged: applyWorkspaceOpacity()
   function syncTypingKeys(force) {
     if (root.typingWanted === root._typingBound && !force) return
     root._typingBound = root.typingWanted
@@ -1149,7 +1247,7 @@ Item {
     root.eventLog = l
   }
   function startEvent(name, chained) {
-    var how = name ? "asked for" : chained ? "chain" : "schedule"
+    var how = chained ? "chain" : name ? "asked for" : "schedule"
     if (!name && root.eventsOn.length === 0) return false
     // The glyph swap runs alongside whatever else is happening.
     if (name === "binary") return startGlyphSwap()
@@ -1164,7 +1262,7 @@ Item {
       // The glyph swap runs on its own clock, so the next event is planned
       // now (a chain carries on as if this link had ended).
       startGlyphSwap()
-      if (chained && root._chainLeft > 0 && Math.random() < root.chainChance) { root._chainLeft--; chainTimer.restart() }
+      if (chained && root._chainLeft > 0 && Math.random() < root.chainChance) { root._chainLeft--; chainNext() }
       else { root._chainLeft = 0; scheduleEvent() }
       return true
     }
@@ -1193,18 +1291,39 @@ Item {
     root.pan = 0
     if (chained) {
       root._chainLeft--
-      chainTimer.restart()
+      chainNext()
     } else {
       root._chainLeft = 0
       scheduleEvent()
     }
   }
 
-  // Events can set off another (Chain events): up to four in a row.
+  // Events can set off another (Chain events): up to four in a row. The
+  // next one comes 5 seconds later, except a Glyph swap, which starts at
+  // once (it runs alongside, and the chain carries on after it).
+  readonly property int chainDelay: 5000
+  property string _chainNext: ""
+  function chainNext() {
+    if (root.eventsOn.length === 0) { root._chainLeft = 0; scheduleEvent(); return }
+    var name = root.eventsOn[Math.floor(Math.random() * root.eventsOn.length)]
+    if (name === "binary") {
+      startGlyphSwap()
+      if (root._chainLeft > 0 && Math.random() < root.chainChance) { root._chainLeft--; chainNext() }
+      else { root._chainLeft = 0; scheduleEvent() }
+      return
+    }
+    root._chainNext = name
+    chainTimer.restart()
+  }
   Timer {
     id: chainTimer
-    interval: 350
-    onTriggered: if (!root.startEvent("", true)) root.scheduleEvent()
+    interval: root.chainDelay
+    onTriggered: {
+      var name = root._chainNext
+      root._chainNext = ""
+      // Switched off meanwhile: no chain.
+      if (!name || root.eventsOn.indexOf(name) < 0 || !root.startEvent(name, true)) { root._chainLeft = 0; root.scheduleEvent() }
+    }
   }
 
   // Positive remainder, so rewinding clocks stay in 0..rainPeriod.
@@ -1494,6 +1613,7 @@ Item {
       collapsedSections: root.collapsedSections,
       glyphSet: root.glyphSet,
       customChars: root.customChars,
+      customImages: root.customImages,
       customCount: root.customCount,
       customRows: root.customRows,
       wallpaperColors: root.wallpaperColors,
@@ -1506,6 +1626,7 @@ Item {
       themeColor: root.themeColor,
       savedLooks: root.savedLooks,
       workspaceLooks: root.workspaceLooks,
+      workspaceOpacity: root.workspaceOpacity,
       workspaceBase: root.workspaceBase,
       eventsVersion: root.eventsVersion
     })
@@ -1522,7 +1643,7 @@ Item {
       if (typeof s.enabled === "boolean") root.enabled = s.enabled
       if (typeof s.manualPaused === "boolean") root.manualPaused = s.manualPaused
       if (typeof s.pauseOnFullscreen === "boolean") root.pauseOnFullscreen = s.pauseOnFullscreen
-      if (s.letterSize !== undefined) root.letterSize = clamp(s.letterSize, 4, 100)
+      if (s.letterSize !== undefined) root.letterSize = clamp(s.letterSize, 4, 200)
       if (s.speed !== undefined) root.speed = clamp(s.speed, 0.02, 1.0)
       if (s.density !== undefined) root.density = clamp(s.density, 0.50, 1.00)
       for (var ak in root.rainAmountRanges)
@@ -1537,6 +1658,7 @@ Item {
       }
       if (typeof s.glyphSet === "string" && root.glyphSets[s.glyphSet]) root.glyphSet = s.glyphSet
       if (typeof s.customChars === "string") root.customChars = s.customChars.slice(0, 200)
+      if (typeof s.customImages === "string") root.customImages = s.customImages.slice(0, 8000)
       if (typeof s.customCount === "number") root.customCount = Math.max(0, Math.min(48, Math.round(s.customCount)))
       if (typeof s.customRows === "number") root.customRows = Math.max(0, Math.min(3, Math.round(s.customRows)))
       if (Array.isArray(s.collapsedSections)) root.collapsedSections = s.collapsedSections.filter(function(x) { return typeof x === "string" }).slice(0, 20)
@@ -1554,6 +1676,14 @@ Item {
         root.workspaceLooks = wl
       }
       if (s.workspaceBase && typeof s.workspaceBase === "object") root.workspaceBase = s.workspaceBase
+      if (s.workspaceOpacity && typeof s.workspaceOpacity === "object") {
+        var wo = ({})
+        for (var ok in s.workspaceOpacity) if (Number(ok) >= 1 && Number(ok) <= root.workspaceCount) {
+          var av = clamp(s.workspaceOpacity[ok], 0, 0.9)
+          if (av > 0) wo[ok] = av
+        }
+        root.workspaceOpacity = wo
+      }
       // Déjà vu used to be the only event: its rate carries over.
       if (s.eventRate === undefined && typeof s.dejaVuRate === "string" && root.eventMinutes[s.dejaVuRate] && s.dejaVu !== false) {
         root.eventRate = s.dejaVuRate
@@ -1671,6 +1801,7 @@ Item {
       if (!root._stateLoaded) root._stateLoaded = true
       themeCheckProc.running = true
       root.checkSoundLab()
+      root.applyWorkspaceOpacity()
       var mon = Hyprland.focusedMonitor
       if (mon && mon.activeWorkspace) root.workspaceSwitched(mon.activeWorkspace.id)
     }
@@ -1681,6 +1812,8 @@ Item {
     root.shuttingDown = true
     // Take the typing binds away with the plugin (detached: this object goes).
     if (root._typingBound) Quickshell.execDetached(["python3", root.pluginDir + "/tools/typing-keys.py", "off"])
+    // Put window opacity back to Omarchy's own.
+    if (root._opacityRules) Quickshell.execDetached(["hyprctl", "eval", [1, 2, 3, 4, 5].map(root.opacityRuleLua).join("; ")])
   }
 
   // Quickshell tracks hasFullscreen from Hyprland events; refreshing the
@@ -1698,7 +1831,10 @@ Item {
       if (event.name === "workspacev2") root.workspaceSwitched(parseInt(String(event.data).split(",")[0]))
       else if (event.name === "custom" && String(event.data) === "ertiv-matrix-rain:key") root.keyRipple()
       // A config reload drops runtime binds: add the typing binds again.
-      else if (event.name === "configreloaded" && root._typingBound) root.syncTypingKeys(true)
+      else if (event.name === "configreloaded") {
+        if (root._typingBound) root.syncTypingKeys(true)
+        root.applyWorkspaceOpacity()
+      }
       switch (event.name) {
         case "fullscreen":
         case "openwindow":

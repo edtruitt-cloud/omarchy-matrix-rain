@@ -145,17 +145,30 @@ panels the mouse wheel only scrolls; it never changes a setting.
 - **My looks**: *Save look* keeps the weather, glyphs, light and colours (including the Theme colour) under
   a name (up to 12); tap one to use it, drag it to move it, right-click twice to delete it. *Copy
   code* puts the current look on the clipboard as an `MR1:` code; *Paste code*
-  adds a look from the clipboard.
+  adds a look from the clipboard. A Custom look's code carries the drawn
+  symbols and pictures themselves (never your file paths), so whoever pastes
+  it sees the same glyphs; they show up as *shared* picture chips. Saved
+  looks remember their own Custom glyphs too.
+- **Workspaces → See-through**: pick a workspace (1–5) and set how
+  see-through its windows are (0% = off), so the rain shows through. Done
+  with Hyprland window rules added at runtime (`hyprctl eval`), never written
+  to your config and removed when the plugin unloads; windows Omarchy keeps
+  opaque (picture-in-picture, Steam, …) stay opaque. Whole windows fade,
+  text included.
 - **Workspaces**: one chip per workspace (1–5). Tap it to step through your
   saved looks (right-click steps back); *Your look* keeps whatever you have.
   The rain dips and changes as you switch; the desktop theme is left alone.
 - **Glyphs**: Matrix (the rain's own mix), Katakana, Binary, Digits, Hex,
   Latin, Greek, Runes, Braille, Box, Hieroglyphs, Alchemy or Custom. Custom
-  takes your own symbols (up to 48), any you like: `tools/custom-glyphs.py`
+  takes your own symbols and pictures (up to 48 together), any you like.  *Add
+  pictures…* opens the file picker (zenity) in Downloads to choose images
+  (PNG, JPEG, WebP, GIF, BMP, SVG); right-click a picture's chip to remove it: `tools/custom-glyphs.py`
   draws each one an installed font can draw in the rain's tall style, as one
   colour (emoji keep their detail as shading), thickening hairline strokes
   and removing specks so it reads at rain sizes, into
-  `~/.local/state/ertiv.matrix-rain/custom-glyphs.png`. It runs locally.
+  `~/.local/state/ertiv.matrix-rain/custom-glyphs.png`. Small pictures are enlarged and sharpened when that measures crisper
+  (with `realesrgan-ncnn-vulkan` installed, they get an AI upscale first).
+  Custom glyphs are drawn at twice the rain atlas's resolution. It runs locally.
   Needs `python-pillow`. The screensaver shows the rain's own glyphs for Custom. *Mirrored* flips a share of the
   glyphs, *Glyph weight* makes them bolder.
 - **Motion**: *Gravity* speeds streams up as they fall; *Speed variety*
@@ -185,7 +198,8 @@ panels the mouse wheel only scrolls; it never changes a setting.
   back. Downloads thicken it a little (from `/proc/net/dev`, always on).
 - **More events**: *Drift* pulls some streams ahead and holds others back;
   *Cascade* lights every letter in an uneven wave. *Chain events* lets one
-  event set off another, up to four in a row.
+  event set off another, up to four in a row, 5 seconds apart (a chained
+  *Glyph swap* starts at once).
 - **Fullscreen**: *Pause rain* or *Keep falling* while a window is fullscreen.
 
 ## Optional screensaver

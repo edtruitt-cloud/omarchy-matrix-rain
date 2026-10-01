@@ -324,7 +324,7 @@ void main() {
         p.x += sin(t * 0.19 + fi * 0.4) * 0.22;
 
         // Glyph size follows the wallpaper's letter size (16 px = 1.0).
-        float cell = 0.10 * clamp(cellScale, 0.4, 6.5);
+        float cell = 0.10 * clamp(cellScale, 0.4, 13.0);
         float pitch = cell * 1.38;
         float col = floor(p.x / pitch);
         float row = floor(p.y / cell);
