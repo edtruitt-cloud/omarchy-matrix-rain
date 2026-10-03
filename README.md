@@ -238,6 +238,9 @@ omarchy-shell matrix-rain eventNow dive             # dejavu, rewind, bullet, su
 omarchy-shell matrix-rain notifyTest              # show the notification burst
 omarchy-shell matrix-rain setColor theme     # green, theme, amber, cyan, red, violet or #rrggbb
 omarchy-shell matrix-rain toggle
+omarchy-shell matrix-rain getLook                # print the current look's code (MR1:...)
+omarchy-shell matrix-rain tryLook 'MR1:...'      # show a look without saving it
+omarchy-shell matrix-rain addLook 'MR1:...'      # add a look to Saved looks and use it
 ```
 
 ## Sound Lab link

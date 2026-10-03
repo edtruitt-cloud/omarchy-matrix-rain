@@ -1999,6 +1999,9 @@ Item {
     function rippleTest(): string { root.keyRipple(); return "ok" }
     function setCustom(symbols: string): string { return root.setCustomGlyphs(symbols) ? "checking" : "busy" }
     function setColor(v: string): string { return root.applyRainColor(v) ? root.rainColor : "invalid: use green, theme, amber, cyan, red, violet or #rrggbb" }
+    function getLook(): string { return root.lookCode("Shared look") }
+    function tryLook(code: string): string { return root.applyLook(root.readLookCode(code)) ? "ok" : "invalid: a look code starts with MR1:" }
+    function addLook(code: string): string { return root.importLook(code) || "invalid: a look code starts with MR1:" }
     function ping(): string { return "ok" }
   }
 }
